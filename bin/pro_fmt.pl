@@ -1,6 +1,6 @@
 #!perl
 #---------------------------------------------------------------------
-# pro_fmt.pl 0.003 (12-Aug-1996 21:15:18)
+# pro_fmt.pl 0.003 (12-Aug-1996 21:15:18 GMT)
 # Copyright 1996 Christopher J. Madsen
 #
 # This program is free software; you can redistribute it and/or modify

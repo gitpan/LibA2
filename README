@@ -1,22 +1,26 @@
-LibA2	Release 0.002
+LibA2	Release 0.003
 Copyright 1996 Christopher J. Madsen
 
 LibA2 provides both end-user utilities and library modules for
 accessing files on Apple II ProDOS disk images for use with most Apple
 II emulators.
 
-This is an ALPHA release of LibA2.  This means that documentation is
-minimal (i.e, nonexistent (Use the source, Luke!)), bugs are likely,
-and the interfaces are liable to change.  Use at your own risk.  Keep
-a recent backup handy.  Wait sixty minutes before swimming.
+This is a BETA release of LibA2.  There's some documentation, but it's
+not complete.  If you want to see the rest of the documentation, then
+send email!  Otherwise, I'll probably never get around to writing it.
+Until then, use the source, Luke!  There are still probably some bugs,
+and the interfaces might still change.  Use at your own risk.  Keep a
+recent backup handy.  Wait sixty minutes before swimming.
 
 All this having been said, I'm not aware of any serious bugs in LibA2
 (besides the ones listed in the BUGS section below).  Good luck!
+I would very much like to hear from everyone who tries LibA2.  The
+more comments I get, the more likely I am to do more work on it.
 Please send comments, questions, bug reports, and patches to me.
 You'll find my email address at the end of this file.
 
 The included utilities are:
-    prodos.pl		version 0.008
+    prodos.pl		version 0.010
 	`prodos.pl' is the main end-user utility.  It provides a
 	Unix-style shell for accessing ProDOS volumes.  This allows
 	you to list the contents of disk images, create
@@ -36,7 +40,7 @@ The included utilities are:
 		pro_fmt VOLUME_NAME  SIZE_IN_BLOCKS  IMAGE_FILE
 	This is likely to change in the future.
 
-    pro_opt.pl		version 0.002
+    pro_opt.pl		version 0.004
 	`pro_opt.pl' removes unused space from ProDOS disk images.  This
 	is most useful for reducing the size of hard disk images.  It
 	doesn't use any form of compression; it simply moves
@@ -45,12 +49,19 @@ The included utilities are:
 	likely to have some bugs left.  The parameters for pro_opt.pl are:
 		pro_opt SOURCE_IMAGE_FILE  DESTINATION_IMAGE_FILE
 
-    awp2txt.pl		version 0.004
+    awp2txt.pl		version 0.005
 	`awp2txt.pl' converts AppleWorks word processor files into text
 	files.  This is a bit out of place in LibA2, because it has
 	nothing to do with disk images, but I included it because
 	users of LibA2 may find it useful.  The parameters for awp2txt are:
 		awp2txt FILE ...
+
+    var_display.pl	version 1.004
+	`var_display.pl' lists the contents of an Applesoft BASIC VAR file.
+	Currently, it can only display string variables and string arrays.
+	Like awp2txt, you must first extract the VAR file from the disk
+	image.  The parameters for var_display are:
+		var_display FILE
 
 For people interested in writing their own utilities in Perl, LibA2
 provides Perl 5 modules that supply classes for accessing ProDOS disk
@@ -58,7 +69,7 @@ images.  DOS 3.3 disks are not currently supported (except by
 AppleII::Disk, which doesn't care what kind of data is on the disk).
 
 The included modules are:
-    AppleII::Disk	version 0.008
+    AppleII::Disk	version 0.009
 	`AppleII::Disk' provides block-level access to disk images.
 	It's useful because there are two main formats for Apple disk
 	images:  ProDOS order and DOS 3.3 order.  These formats do not
@@ -66,11 +77,44 @@ The included modules are:
 	order in which the data appears.  AppleII::Disk takes care of
 	the differences for you.
 
-    AppleII::ProDOS	version 0.018
+    AppleII::ProDOS	version 0.026
 	`AppleII::ProDOS' provides tools for accessing files on ProDOS
 	disk images.  `prodos.pl' is basically just a wrapper around
 	AppleII::ProDOS.
 
+CHANGES
+    Here's what's new in version 0.003 of LibA2:
+    (See the file `Changes' for the full revision history.)
+      
+	First beta release of LibA2
+      
+	New utilities:
+	  var_display.pl      version 1.004
+      
+	Updated utilities:
+	  awp2txt.pl	      version 0.005
+	    Includes documentation
+      
+	  prodos.pl	      version 0.010
+	    Includes documentation
+	    Supports an external pager for long text displays
+      
+	  pro_opt.pl	      version 0.004
+	    Includes documentation
+	    Now runs much faster
+      
+	Updated modules:
+	  AppleII::Disk       version 0.009
+	    Includes documentation
+	    Added blocks method to get/set disk size
+      
+	  AppleII::ProDOS     version 0.026
+	    Includes documentation (still incomplete)
+	    Adding a file to a full subdirectory automatically expands the
+	      subdirectory.
+	    Allocating free blocks is now much more efficient.	This make
+	      the volume optimizer (pro_opt.pl) much much faster.
+      
 LICENSE
 	LibA2 is free software; you can redistribute it and/or modify
 	it under the same terms as Perl itself.
@@ -90,11 +134,9 @@ BUGS
 	way of fixing this, please let me know.
 
     Documentation
-	There isn't any.  Yet.
-
-    AppleII::ProDOS
-	Cannot add blocks to a subdirectory.  If you try to add files
-	to a subdirectory with no free entries, it dies.
+	There isn't enough.  Yet.  If you'd like to read it, send
+	email.  If I think people want to read it, I'm far more likely
+	to write it. :-)  Until then, use the source, Luke.
 
     prodos.pl
 	There's no way to copy a file from a disk image under another

@@ -5,7 +5,7 @@ package AppleII::ProDOS;
 #
 # Author: Christopher J. Madsen <ac608@yfn.ysu.edu>
 # Created: 26 Jul 1996
-# Version: 0.018 (12-Aug-1996)
+# Version: 0.026 (25-Feb-1997)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
@@ -19,11 +19,11 @@ package AppleII::ProDOS;
 #---------------------------------------------------------------------
 
 require 5.000;
-use AppleII::Disk 0.008;
+use AppleII::Disk 0.009;
 use Carp;
 use POSIX 'mktime';
 use strict;
-use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
+use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION $AUTOLOAD);
 
 require Exporter;
 @ISA = qw(AppleII::ProDOS::Members Exporter);
@@ -40,13 +40,21 @@ my %vol_fields = (
     name     => undef,
 );
 
+# Methods to be passed along to the current directory:
+my %dir_methods = (
+    catalog  => undef,
+    get_file => undef,
+    new_dir  => undef,
+    put_file => undef,
+);
+
 #=====================================================================
 # Package Global Variables:
 
 BEGIN
 {
     # Convert RCS revision number to d.ddd format:
-    ' 0.018 ' =~ / (\d+)\.(\d{1,3})(\.[0-9.]+)? /
+    ' 0.026 ' =~ / (\d+)\.(\d{1,3})(\.[0-9.]+)? /
         or die "Invalid version number";
     $VERSION = $VERSION = sprintf("%d.%03d%s",$1,$2,$3);
 } # end BEGIN
@@ -107,20 +115,22 @@ sub new
     a2_croak("Invalid name `$name'") unless valid_name($name);
 
     my $disk = AppleII::Disk->new($filename, ($mode || '') . 'rw');
-    $disk->{maxlen} = 0x200 * $diskSize; # FIXME
+    $disk->blocks($diskSize);
+
+    my $bitmap = AppleII::ProDOS::Bitmap->new($disk,6,$diskSize);
 
     my $self = {
-        bitmap =>
-            AppleII::ProDOS::Bitmap->new($disk,6,$diskSize),
+        bitmap      => $bitmap,
         directories => [ AppleII::ProDOS::Directory->new(
-            $name, $disk, [2 .. 5], undef, undef, 6, $diskSize
+            $name, $disk, [2 .. 5], $bitmap
         ) ],
         disk   => $disk,
         name   => $name,
+        _dir_methods => \%dir_methods,
         _permitted => \%vol_fields,
     };
 
-    $self->{bitmap}->write_disk;
+    $bitmap->write_disk;
     $self->{directories}[0]->write_disk;
 
     bless $self, $type;
@@ -147,7 +157,10 @@ sub new
 sub open
 {
     my ($type, $disk, $mode) = @_;
-    my $self = { _permitted => \%vol_fields };
+    my $self = {
+        _dir_methods => \%dir_methods,
+        _permitted   => \%vol_fields,
+    };
     $disk = AppleII::Disk->new($disk, $mode) unless ref $disk;
     $self->{disk} = $disk;
 
@@ -158,32 +171,18 @@ sub open
     croak('This is not a ProDOS disk') unless $storageType == 0xF;
 
     my ($startBlock, $diskSize) = unpack('x39v2',$volDir);
-    $disk->{maxlen} = 0x200 * $diskSize; # FIXME
+    $disk->blocks($diskSize);
 
     $self->{bitmap} =
       AppleII::ProDOS::Bitmap->open($disk,$startBlock,$diskSize);
 
-    $self->{directories} = [ AppleII::ProDOS::Directory->open($disk,2) ];
+    $self->{directories} = [
+        AppleII::ProDOS::Directory->open($disk, 2, $self->{bitmap})
+    ];
     $self->{diskSize} = $diskSize;
 
     bless $self, $type;
 } # end AppleII::ProDOS::open
-
-#---------------------------------------------------------------------
-# Return the disk catalog and free space information:
-#
-# Returns:
-#   A string containing a catalog listing with free space information
-
-sub catalog
-{
-    my ($self, @rest) = @_;
-    my $bitmap = $self->{bitmap};
-    my ($free, $total, $used) = ($bitmap->free, $bitmap->diskSize);
-    $used = $total - $free;
-    $self->{directories}[-1]->catalog(@rest) .
-        "Blocks free: $free     Blocks used: $used     Total blocks: $total\n";
-} # end AppleII::ProDOS::catalog
 
 #---------------------------------------------------------------------
 # Return the current directory:
@@ -194,19 +193,6 @@ sub catalog
 sub dir {
     shift->{directories}[-1];
 } # end AppleII::ProDOS::dir
-
-#---------------------------------------------------------------------
-sub get_file
-{
-    shift->{directories}[-1]->get_file(@_);
-} # end AppleII::ProDOS::get_file
-
-#---------------------------------------------------------------------
-sub new_dir
-{
-    my $self = shift;
-    $self->{directories}[-1]->new_dir($self->{bitmap}, @_);
-} # end AppleII::ProDOS::new_dir
 
 #---------------------------------------------------------------------
 # Return or change the current path:
@@ -230,7 +216,8 @@ sub path
         my $dir;
         foreach $dir (split(/\//, $newpath)) {
             eval { push @directories, $directories[-1]->open_dir($dir) };
-            croak("No such directory `$_[1]'") if $@ =~ /^No such directory/;
+            a2_croak("No such directory `$_[1]'")
+                if $@ =~ /^LibA2: No such directory/;
             die $@ if $@;
         }
         $self->{directories} = \@directories;
@@ -240,11 +227,22 @@ sub path
 } # end AppleII::ProDOS::path
 
 #---------------------------------------------------------------------
-sub put_file
+# Pass method calls along to the current directory:
+
+sub AUTOLOAD
 {
-    my $self = shift;
-    $self->{directories}[-1]->put_file($self->{bitmap}, @_);
-} # end AppleII::ProDOS::put_file
+    my $self = $_[0];
+    my $name = $AUTOLOAD;
+    $name =~ s/.*://;   # strip fully-qualified portion
+    unless (ref($self) and exists $self->{'_dir_methods'}{$name}) {
+        # Try to access a field by that name:
+        $AppleII::ProDOS::Members::AUTOLOAD = $AUTOLOAD;
+        goto &AppleII::ProDOS::Members::AUTOLOAD;
+    }
+
+    shift @_; # Remove self
+    $self->{directories}[-1]->$name(@_);
+} # end AppleII::ProDOS::AUTOLOAD
 
 #---------------------------------------------------------------------
 # Like croak, but get out of all AppleII::ProDOS classes:
@@ -255,7 +253,7 @@ sub a2_croak
     while ((caller $Carp::CarpLevel)[0] =~ /^AppleII::ProDOS/) {
         ++$Carp::CarpLevel;
     }
-    &croak;
+    croak("LibA2: " . $_[0]);
 } # end AppleII::ProDOS::a2_croak
 
 #---------------------------------------------------------------------
@@ -347,6 +345,8 @@ sub parse_type
 
 #---------------------------------------------------------------------
 # Convert shell-type wildcards to Perl regexps:
+#
+# This is NOT a method; it's just a regular subroutine.
 #
 # Input:
 #   The filename with optional wildcards
@@ -533,14 +533,16 @@ sub get_blocks
 {
     my ($self, $count) = @_;
     return () if $count > $self->{free};
-    my (@blocks,$i);
-    my $diskSize = $self->{diskSize};
-    for ($i=3; $i < $diskSize; $i++) {
-        if ($self->is_free($i)) {
-            push @blocks, $i;
-            last unless --$count;
+    my @blocks;
+    my $bitmap = $self->{bitmap};
+  BLOCK:
+    while ($bitmap =~ m/([^\0])/g) {
+        my ($offset, $byte) = (8*pos($bitmap)-9, unpack('B8',$1));
+        while ($byte =~ m/1/g) {
+            push @blocks, $offset + pos($byte);
+            last BLOCK unless --$count;
         }
-    }
+    } # end while BLOCK
     return () if $count;        # We couldn't find enough
     $self->mark(\@blocks,0);    # Mark blocks as in use
     @blocks;
@@ -548,6 +550,8 @@ sub get_blocks
 
 #---------------------------------------------------------------------
 # See if a block is free:
+#
+# This method is not currently used and may be removed.
 #
 # Input:
 #   block:  The block number to check
@@ -581,7 +585,7 @@ sub mark
         vec($self->{bitmap}, $block + $adjust[$block % 8],1) = $mark;
     }
     $self->{free} += ($mark ? 1 : -1) * ($#$blocks + 1);
-} # end AppleII::ProDOS::Bitmap::is_free
+} # end AppleII::ProDOS::Bitmap::mark
 
 #---------------------------------------------------------------------
 # Read bitmap from disk:
@@ -592,6 +596,14 @@ sub read_disk
     $self->{bitmap} = $self->{disk}->read_blocks($self->{blocks});
     $self->{free}   = unpack('%32b*', $self->{bitmap});
 } # end AppleII::ProDOS::Bitmap::read_disk
+
+#---------------------------------------------------------------------
+# Return the block number where the bitmap begins:
+
+sub start_block
+{
+    shift->{blocks}[0];
+} # end AppleII::ProDOS::Bitmap::start_block
 
 #---------------------------------------------------------------------
 # Write bitmap to disk:
@@ -608,6 +620,8 @@ package AppleII::ProDOS::Directory;
 # Member Variables:
 #   access:
 #     The access attributes for this directory
+#   bitmap:
+#     The AppleII::ProDOS::Bitmap for the disk
 #   blocks:
 #     The list of blocks used by this directory
 #   disk:
@@ -618,18 +632,22 @@ package AppleII::ProDOS::Directory;
 #     The directory name
 #   created:
 #     The date/time the directory was created
+#   reserved:
+#     The contents of the reserved section (8 byte string)
 #   type:
 #     0xF for a volume directory, 0xE for a subdirectory
 #   version:
 #     The contents of the VERSION & MIN_VERSION (2 byte string)
 #
-# For the volume directory:
-#   bitmap:    The block number where the volume bitmap begins
-#   diskSize:  The number of blocks on the disk
-#
 # For subdirectories:
 #   parent:     The block number in the parent directory where our entry is
 #   parentNum:  Our entry number within that block of the parent directory
+#   fixParent:  True means our parent entry needs to be updated
+#
+# We also use the os_openDirs field of the disk to keep track of open
+# directories.  It contains a hash of Directory objects indexed by key
+# block.  The constructors automatically add the new objects to the
+# hash, and the destructor removes them.
 #---------------------------------------------------------------------
 
 AppleII::ProDOS->import(qw(a2_croak pack_date pack_name parse_name
@@ -651,27 +669,25 @@ my %dir_fields = (
 #---------------------------------------------------------------------
 # Constructor for creating a new directory:
 #
-# Either parent & parentNum or bitmap & diskSize must be
-# specified, but not both.
+# You must supply parent & parentNum when creating a subdirectory.
 #
 # Input:
 #   name:       The name of the new directory
 #   disk:       An AppleII::Disk
 #   blocks:     A block number or array of block numbers for the directory
+#   bitmap:     The AppleII::ProDOS::Bitmap for the disk
 #   parent:     The block number in the parent directory where our entry is
 #   parentNum:  Our entry number within that block of the parent directory
-#   bitmap:     The block number where the volume bitmap begins
-#   diskSize:   The size of the disk in blocks
 
 sub new
 {
-    my ($type, $name, $disk, $blocks,
-        $parent, $parentNum, $bitmap, $diskSize) = @_;
+    my ($type, $name, $disk, $blocks, $bitmap, $parent, $parentNum) = @_;
 
     a2_croak("Invalid name `$name'") unless valid_name($name);
 
     my $self = {
         access  => 0xE3,
+        bitmap  => $bitmap,
         blocks  => $blocks,
         disk    => $disk,
         entries => [],
@@ -685,13 +701,15 @@ sub new
         $self->{type}      = 0xE; # Subdirectory
         $self->{parent}    = $parent;
         $self->{parentNum} = $parentNum;
+        $self->{reserved}  = "\x75\x23\x00\xC3\x27\x0D\x00\x00";
     } else {
-        $self->{type}     = 0xF; # Volume directory
-        $self->{bitmap}   = $bitmap;
-        $self->{diskSize} = $diskSize;
+        $self->{type} = 0xF;    # Volume directory
+        $self->{reserved} = "\0" x 8; # 8 bytes reserved
     } # end else volume directory
 
     bless $self, $type;
+    $disk->{os_openDirs}{$blocks->[0]} = $self;
+    $self;
 } # end AppleII::ProDOS::Directory::new
 
 #---------------------------------------------------------------------
@@ -700,19 +718,33 @@ sub new
 # Input:
 #   disk:       An AppleII::Disk
 #   block:      The block number where the directory begins
+#   bitmap:     The AppleII::ProDOS::Bitmap for the disk
 
 sub open
 {
-    my ($type, $disk, $block) = @_;
+    my ($type, $disk, $block, $bitmap) = @_;
     my $self = {
+        bitmap     => $bitmap,
         disk       => $disk,
         _permitted => \%dir_fields,
     };
 
     bless $self, $type;
+    $disk->{os_openDirs}{$block} = $self;
     $self->read_disk($block);
     $self;
 } # end AppleII::ProDOS::Directory::open
+
+#---------------------------------------------------------------------
+# Destructor:
+#
+# Removes the directory from the hash of open directories.
+
+sub DESTROY
+{
+    my $self = shift;
+    delete $self->{disk}{os_openDirs}{$self->{blocks}[0]};
+} # end AppleII::ProDOS::Directory::DESTROY
 
 #---------------------------------------------------------------------
 # Add entry:
@@ -731,21 +763,25 @@ sub add_entry
 
     my $entries = $self->{entries};
 
-    my $lastEntry = 0xD * (1 + $#{$self->{blocks}});
-
     my $i;
     for ($i=0; $i <= $#$entries; ++$i) {
         last if $entries->[$i]{num} > $i+1;
     }
 
-    a2_croak('Directory full') if ($i > $lastEntry); # FIXME expand dir
+    if ($i+1 >= 0xD * scalar @{$self->{blocks}}) {
+        a2_croak('Volume full') unless $self->{type} == 0xE; # Subdirectory
+        my @blocks = $self->{bitmap}->get_blocks(1);
+        a2_croak('Volume full') unless @blocks;
+        push @{$self->{blocks}}, @blocks;
+        $self->{fixParent} = 1;
+    } # end if directory full
 
     $entry->{num} = $i+1;
     splice @$entries, $i, 0, $entry;
 } # end AppleII::ProDOS::Directory::add_entry
 
 #---------------------------------------------------------------------
-# Return the catalog:
+# Return the directory listing and free space information:
 #
 # Returns:
 #   A string containing the catalog in ProDOS format
@@ -763,8 +799,14 @@ sub catalog
                            short_date($entry->modified),
                            short_date($entry->created),
                            $entry->size, $entry->auxtype);
-    }
-    $result;
+    } # end foreach entry
+
+    my $bitmap = $self->{bitmap};
+    my ($free, $total, $used) = ($bitmap->free, $bitmap->diskSize);
+    $used = $total - $free;
+
+    $result .
+        "Blocks free: $free     Blocks used: $used     Total blocks: $total\n";
 } # end AppleII::ProDOS::Directory::catalog
 
 #---------------------------------------------------------------------
@@ -798,7 +840,9 @@ sub find_entry
 # Read a file:
 #
 # Input:
-#   file:  The name of the file to read
+#   file:
+#     The name of the file to read, OR
+#     an AppleII::ProDOS::DirEntry object representing a file
 #
 # Returns:
 #   A new AppleII::ProDOS::File object for the file
@@ -807,8 +851,10 @@ sub get_file
 {
     my ($self, $filename) = @_;
 
-    my $entry = $self->find_entry($filename)
-        or a2_croak("No such file `$filename'");
+    my $entry = (ref($filename)
+                 ? $filename
+                 : ($self->find_entry($filename)
+                    or a2_croak("No such file `$filename'")));
 
     AppleII::ProDOS::File->open($self->{disk}, $entry);
 } # end AppleII::ProDOS::Directory::get_file
@@ -851,25 +897,28 @@ sub true     { 1 }                   # Accept anything
 # Create a subdirectory:
 #
 # Input:
-#   bitmap:  The AppleII::ProDOS::Bitmap to allocate space from
 #   dir:     The name of the subdirectory to create
 #   size:    The number of entries the directory should hold
 #            The default is to create a 1 block directory
+#
+# Returns:
+#   The DirEntry object for the new directory
 
 sub new_dir
 {
-    my ($self, $bitmap, $dir, $size) = @_;
+    my ($self, $dir, $size) = @_;
 
     a2_croak("Invalid name `$dir'") unless valid_name($dir);
 
     $size = 1 unless $size;
     $size = int(($size + 0xD) / 0xD); # Compute # of blocks (+ dir header)
 
-    my @blocks = $bitmap->get_blocks($size)
+    my @blocks = $self->{bitmap}->get_blocks($size)
         or a2_croak("Not enough free space");
 
+    my $entry = AppleII::ProDOS::DirEntry->new;
+
     eval {
-        my $entry = AppleII::ProDOS::DirEntry->new;
         $entry->storage(0xD);   # Directory
         $entry->name($dir);
         $entry->type(0x0F);     # Directory
@@ -879,27 +928,30 @@ sub new_dir
 
         $self->add_entry($entry);
         my $subdir = AppleII::ProDOS::Directory->new(
-            $dir, $self->{disk}, \@blocks,
+            $dir, $self->{disk}, \@blocks, $self->{bitmap},
             $self->{blocks}[int($entry->num / 0xD)], int($entry->num % 0xD)+1
         );
 
         $subdir->write_disk;
         $self->write_disk;
-        $bitmap->write_disk;
+        $self->{bitmap}->write_disk;
     }; # end eval
     if ($@) {
         my $error = $@;         # Clean up after error
         $self->read_disk;
-        $bitmap->read_disk;
+        $self->{bitmap}->read_disk;
         die $error;
     } # end if error while creating directory
+
+    $entry;
 } # end AppleII::ProDOS::Directory::new_dir
 
 #---------------------------------------------------------------------
 # Open a subdirectory:
 #
 # Input:
-#   dir:  The name of the subdirectory to open
+#   dir:  The name of the subdirectory to open, OR
+#         an AppleII::ProDOS::DirEntry object representing the directory
 #
 # Returns:
 #   A new AppleII::ProDOS::Directory object for the subdirectory
@@ -908,35 +960,40 @@ sub open_dir
 {
     my ($self, $dir) = @_;
 
-    my $entry = $self->find_entry($dir)
-        or a2_croak("No such directory `$dir'");
+    my $entry = (ref($dir)
+                 ? $dir
+                 : ($self->find_entry($dir)
+                    or a2_croak("No such directory `$dir'")));
 
-    AppleII::ProDOS::Directory->open($self->{disk}, $entry->block);
+    a2_croak('`' . $entry->name . "' is not a directory")
+        unless $entry->type == 0x0F;
+
+    AppleII::ProDOS::Directory->open($self->{disk}, $entry->block,
+                                     $self->{bitmap});
 } # end AppleII::ProDOS::Directory::open_dir
 
 #---------------------------------------------------------------------
 # Add a new file to the directory:
 #
 # Input:
-#   bitmap:  The AppleII::ProDOS::Bitmap for the disk
 #   file:    The AppleII::ProDOS::File to add
 
 sub put_file
 {
-    my ($self, $bitmap, $file) = @_;
+    my ($self, $file) = @_;
 
     eval {
-        $file->allocate_space($bitmap);
+        $file->allocate_space($self->{bitmap});
         $self->add_entry($file);
         $file->write_disk($self->{disk});
         $self->write_disk;
-        $bitmap->write_disk;
+        $self->{bitmap}->write_disk;
     };
     if ($@) {
         my $error = $@;
         # Clean up after failure:
         $self->read_disk;
-        $bitmap->read_disk;
+        $self->{bitmap}->read_disk;
         die $error;
     }
 } # end AppleII::ProDOS::Directory::put_file
@@ -963,6 +1020,7 @@ sub read_disk
                 # Directory header
                 $self->{name} = $name;
                 $self->{type} = $type;
+                $self->{reserved} = substr($data, 0x14-4,8);
                 $self->{created} = substr($data, 0x1C-4,4);
                 $self->{version} = substr($data, 0x20-4,2);
                 $self->{access}  = ord substr($data, 0x22-4,1);
@@ -970,11 +1028,7 @@ sub read_disk
                     # For subdirectory, read parent pointers
                     @{$self}{qw(parent parentNum)} =
                         unpack('vC',substr($data,0x27-4,3));
-                } else {
-                    # For volume directory, read bitmap location and disk size:
-                    @{$self}{qw(bitmap diskSize)} =
-                        unpack('v2',substr($data,0x27-4,4));
-                } # end else volume directory
+                } # end if subdirectory
             } elsif ($type) {
                 # File entry
                 push @entries, AppleII::ProDOS::DirEntry->new($entry, $data);
@@ -998,9 +1052,22 @@ sub write_disk
     my @blocks  = @{$self->{blocks}};
     my @entries = @{$self->{'entries'}};
     my $keyBlock = $blocks[0];
+
+    if ($self->{fixParent}) {
+        delete $self->{fixParent};
+        my $data = $disk->read_block($self->{parent});
+        my $entry = 4 + 0x27*($self->{parentNum}-1);
+        substr($data, $entry + 0x11, 7) =
+            pack('v2VX', $keyBlock, scalar(@blocks), 0x200 * scalar(@blocks));
+        # FIXME update modified date?
+        $disk->write_block($self->{parent}, $data);
+        my $parentBlock = unpack('v', substr($data,$entry + 0x25, 2));
+        $disk->{os_openDirs}{$parentBlock}->read_disk
+            if $disk->{os_openDirs}{$parentBlock};
+    } # end if parent entry needs updating
+
     push    @blocks, 0;         # Add marker at beginning and end
     unshift @blocks, 0;
-
     my ($i, $entry);
     for ($i=1, $entry=0; $i < $#blocks; $i++) {
         my $data = pack('v2',$blocks[$i-1],$blocks[$i+1]); # Block pointers
@@ -1015,18 +1082,15 @@ sub write_disk
             } else {
                 # Add the directory header:
                 $data .= pack_name(@{$self}{'type','name'});
-                if ($self->{type} == 0xF) {
-                    $data .= "\0" x 8; # 8 bytes reserved
-                } else {
-                    $data .= "\x75\x23\x00\xC3\x27\x0D\x00\x00";
-                } # end else subdirectory
+                $data .= $self->{reserved};
                 $data .= $self->{created};
                 $data .= $self->{version};
                 $data .= chr $self->{access};
                 $data .= "\x27\x0D"; # Entry length, entries per block
                 $data .= pack('v',$#entries+1);
                 if ($self->{type} == 0xF) {
-                    $data .= pack('v2',@{$self}{'bitmap','diskSize'});
+                    my $bitmap = $self->{bitmap};
+                    $data .= pack('v2',$bitmap->start_block,$bitmap->diskSize);
                 } else {
                     $data .= pack('vCC',@{$self}{'parent','parentNum'},
                                   0x27); # Parent entry length
@@ -1053,6 +1117,7 @@ package AppleII::ProDOS::DirEntry;
 #   size:     The file size in bytes
 #   storage:  The storage type
 #   type:     The file type
+#   version:  The contents of the VERSION & MIN_VERSION (2 byte string)
 #---------------------------------------------------------------------
 AppleII::ProDOS->import(qw(pack_date pack_name parse_name parse_type
                            valid_date valid_name));
@@ -1098,10 +1163,12 @@ sub new
 
         $self->{created}  = substr($entry,0x18,4);
         $self->{modified} = substr($entry,0x21,4);
+        $self->{version}  = substr($entry,0x1C,2);
     } else {
         # Blank entry:
         $self->{created} = $self->{modified} = pack_date(time);
-        @{$self}{qw(access auxtype type)} = (0xE3, 0x0000, 0x00);
+        @{$self}{qw(access auxtype type version)} =
+            (0xE3, 0x0000, 0x00, "\0\0");
     }
     bless $self, $type;
 } # end AppleII::ProDOS::DirEntry::new
@@ -1120,7 +1187,7 @@ sub packed
     my ($self, $keyBlock) = @_;
     my $data = pack_name(@{$self}{'storage', 'name'});
     $data .= pack('Cv2VX',@{$self}{qw(type block blksUsed size)});
-    $data .= $self->{created} . "\0\0";
+    $data .= $self->{created} . $self->{version};
     $data .= pack('Cv',@{$self}{qw(access auxtype)});
     $data .= $self->{modified};
     $data .= pack('v',$keyBlock);
@@ -1184,6 +1251,7 @@ sub new
         name       => $name,
         size       => length($data),
         type       => 0,
+        version    => "\0\0",
         _permitted => \%fil_fields
     };
 
@@ -1213,7 +1281,7 @@ sub open
     my ($type, $disk, $entry) = @_;
     my $self = { _permitted => \%fil_fields };
     my @fields = qw(access auxtype blksUsed created modified name size
-                    storage type);
+                    storage type version);
     @{$self}{@fields} = @{$entry}{@fields};
 
     my ($storage, $keyBlock, $blksUsed, $size) =
@@ -1467,13 +1535,15 @@ sub AUTOLOAD
     my $type = ref($self) or croak("$self is not an object");
     my $name = $AUTOLOAD;
     $name =~ s/.*://;   # strip fully-qualified portion
-    unless (exists $self->{'_permitted'}{$name}) {
+    my $field = $name;
+    $field =~ s/_([a-z])/\u$1/g; # squash underlines into mixed case
+    unless (exists $self->{'_permitted'}{$field}) {
         # Ignore special methods like DESTROY:
         return undef if $name =~ /^[A-Z]+$/;
         croak("Can't access `$name' field in object of class $type");
     }
     if ($#_) {
-        my $check = $self->{'_permitted'}{$name};
+        my $check = $self->{'_permitted'}{$field};
         my $ok;
         if (ref($check) eq 'CODE') {
             $ok = &$check;      # Pass our @_ to validator
@@ -1482,10 +1552,10 @@ sub AUTOLOAD
         } else {
             croak("Field `$name' of class $type is read-only");
         }
-        return $self->{$name} = $_[1] if $ok;
+        return $self->{$field} = $_[1] if $ok;
         croak("Invalid value `$_[1]' for field `$name' of class $type");
     }
-    return $self->{$name};
+    return $self->{$field};
 } # end AppleII::ProDOS::Members::AUTOLOAD
 
 #=====================================================================
@@ -1495,6 +1565,332 @@ sub AUTOLOAD
 
 __END__
 
+=head1 NAME
+
+AppleII::ProDOS - Access files on Apple II ProDOS disk images
+
+=head1 SYNOPSIS
+
+    use AppleII::ProDOS;
+    my $vol = AppleII::ProDOS->open('image.dsk'); # Open an existing disk
+    print $vol->catalog;                  # List files in volume directory
+    my $file = $vol->get_file('Startup'); # Read file from disk
+    $vol->path('Subdir');                 # Move into a subdirectory
+    $vol->put_file($file);                # And write it back there
+
+=head1 DESCRIPTION
+
+C<AppleII::ProDOS> provides high-level access to ProDOS volumes stored
+in the disk image files used by most Apple II emulators.  (For
+information about Apple II emulators, try the Apple II Emulator Page
+at L<http://www.ecnet.net/users/mumbv/pages/apple2.shtml>.)  It uses
+the L<AppleII::Disk> module to handle low-level access to image files.
+
+All the following classes have two constructors.  Constructors named
+C<open> are for creating an object to represent existing data in the
+image file.  Constructors named C<new> are for creating a new object
+to be added to an image file.
+
+=head2 C<AppleII::ProDOS>
+
+C<AppleII::ProDOS> is the primary interface to ProDOS volumes.  It
+provides the following methods:
+
+=over 4
+
+=item $vol = AppleII::ProDOS->new($volume, $size, $filename, [$mode])
+
+Constructs a new image file and an C<AppleII::ProDOS> object to access
+it.  C<$volume> is the volume name.  C<$size> is the size in blocks.
+C<$filename> is the name of the image file.  The optional C<$mode> is
+a string specifying how to open the image (see the C<open> method for
+details).  You always receive read and write access.
+
+=item $vol = AppleII::ProDOS->open($filename, [$mode])
+
+Constructs an C<AppleII::ProDOS> object to access an existing image file.
+C<$filename> is the name of the image file.  The optional C<$mode> is
+a string specifying how to open the image.  It can consist of the
+following characters (I<case sensitive>):
+
+    r  Allow reads (this is actually ignored; you can always read)
+    w  Allow writes
+    d  Disk image is in DOS 3.3 order
+    p  Disk image is in ProDOS order
+
+=item $vol = AppleII::ProDOS->open($disk)
+
+Constructs an C<AppleII::ProDOS> object to access an existing image file.
+C<$disk> is the C<AppleII::Disk> object representing the image file.
+
+=item $bitmap = $vol->bitmap
+
+Returns the volume bitmap as an C<AppleII::ProDOS::Bitmap> object.
+
+=item $dir = $vol->dir
+
+Returns the current directory as an AppleII::ProDOS::Directory object.
+
+=item $disk = $vol->disk
+
+Returns the C<AppleII::ProDOS::Disk> object which represents the image
+file.
+
+=item $disk = $vol->disk_size
+
+Returns the size of the volume in blocks.  This is the logical size of
+the ProDOS volume, which is not necessarily the same as the actual
+size of the image file.
+
+=item $name = $vol->name
+
+Returns the volume name.
+
+=item $path = $vol->path([$newpath])
+
+Gets or sets the current path.  C<$newpath> is the new pathname, which
+may be either relative or absolute.  `..' may be used to specify the
+parent directory, but this must occur at the beginning of the path
+(`../../dir' is valid, but `../dir/..' is not).
+If c<$newpath>> is omitted, then the current path is not changed.
+Returns the current path as a string beginning and ending with C</>.
+
+=item $catalog = $vol->catalog
+
+=item $file = $vol->get_file($filename)
+
+=item $entry = $vol->new_dir($name)
+
+=item $vol->put_file($file)
+
+These methods are passed to the current directory.  See
+C<AppleII::ProDOS::Directory> for details.
+
+=back
+
+=head2 C<AppleII::ProDOS::Directory>
+
+C<AppleII::ProDOS::Directory> represents a ProDOS directory. It
+provides the following methods:
+
+=over 4
+
+=item $dir = AppleII::ProDOS::Directory->new($name, $disk, $blocks, $bitmap, [$parent, $parentNum])
+
+Constructs a new C<AppleII::ProDOS::Directory> object.
+C<$name> is the name of the directory.  C<$disk> is the
+C<AppleII::Disk> to create it on.  C<$blocks> is a block number or an
+array of block numbers to store the directory in.  C<$bitmap> is the
+C<AppleII::ProDOS::Bitmap> representing the volume bitmap.  For a
+subdirectory, C<$parent> must be the block number in the parent
+directory where the subdirectory is listed, and C<$parentNum> is the
+entry number in that block (with 1 being the first entry).
+
+=item $dir = AppleII::ProDOS->open($disk, $block, $bitmap)
+
+Constructs an C<AppleII::ProDOS::Directory> object to access an
+existing directory in the image file.  C<$disk> is the
+C<AppleII::Disk> object representing the image file.  C<$block> is the
+block number where the directory begins.  C<$bitmap> is the
+C<AppleII::ProDOS::Bitmap> representing the volume bitmap.
+
+=item $catalog = $dir->catalog
+
+Returns the directory listing in ProDOS format with free space information.
+
+=item @entries = $dir->entries
+
+Returns the contents of the directory as a list of
+C<AppleII::ProDOS::DirEntry> objects.
+
+=item $entry = $dir->find_entry($filename)
+
+Returns the C<AppleII::ProDOS::DirEntry> object for C<$filename>, or
+undef if the specified file does not exist.
+
+=item $file = $dir->get_file($filename)
+
+Retrieves a file from the directory.  C<$filename> may be either a
+filename or an C<AppleII::ProDOS::DirEntry> object.  Returns a new
+C<AppleII::ProDOS::File> object.
+
+=item @entries = $dir->list_matches($pattern, [$filter])
+
+Returns a list of the C<AppleII::ProDOS::DirEntry> objects matching
+the regexp C<$pattern>.  If C<$filter> is specified, it is either a
+subroutine reference or one of the strings 'DIR' or '!DIR'.  'DIR'
+matches only directories, and '!DIR' matches only regular files.  If
+C<$filter> is a subroutine, it is called (as C<\&$filter($entry)>) for
+each entry.  It should return true if the entry is acceptable (the
+entry's name must still match C<$pattern>).  Returns the null list if
+there are no matching entries.
+
+=item $entry = $dir->new_dir($name)
+
+Creates a new subdirectory in the directory.  C<$name> is the name of
+the new subdirectory.  Returns the C<AppleII::ProDOS::DirEntry> object
+representing the new subdirectory entry.
+
+=item $entry = $dir->open_dir($dirname)
+
+Opens a subdirectory of the directory.  C<$dirname> may be either a
+subdirectory name or an C<AppleII::ProDOS::DirEntry> object.  Returns
+a new C<AppleII::ProDOS::Directory> object.
+
+=item $dir->put_file($file)
+
+Stores a file in the directory.  C<$file> must be an
+C<AppleII::ProDOS::File> object.
+
+=item $dir->add_entry($entry)
+
+Adds a new entry to the directory.  C<$entry> is an
+C<AppleII::ProDOS::DirEntry> object.
+
+=item $dir->read_disk
+
+Rereads the directory contents from the image file.  You can use this
+to undo changes to a directory before they have been written to the
+image file.
+
+=item $dir->write_disk
+
+Writes the current directory contents to the image file.  You must use
+this if you alter the directory contents in any way except the
+high-level methods C<new_dir> and C<put_file>, which do this
+automatically.
+
+=back
+
+=head2 C<AppleII::ProDOS::DirEntry>
+
+C<AppleII::ProDOS::DirEntry> provides access to directory entries.
+It provides the following methods:
+
+=over 4
+
+=item $entry = AppleII::ProDOS::DirEntry->new([$num, $entry])
+
+Constructs a new C<AppleII::ProDOS::DirEntry> object.
+C<$num> is the entry number in the directory, and C<$entry> is the
+packed directory entry.  If C<$num> and C<$entry> are omitted, then a
+blank directory entry is created.  This is a low-level function; you
+shouldn't need to explicitly construct DirEntry objects.
+
+=item $packed_entry = $entry->packed($key_block)
+
+Return the directory entry in packed format.  C<$key_block> is the
+starting block number of the directory containing this entry.
+
+=item $access = $entry->access([$new])
+
+Gets or sets the access attributes.  This is a bitfield with the
+following entries:
+
+    0x80  File can be deleted
+    0x40  File can be renamed
+    0x20  File has changed since last backup
+    0x02  File can be written to
+    0x01  File can be read
+
+Normal values are 0xC3 or 0xE3 for an unlocked file, and 0x01 for a
+locked file.
+
+=item $auxtype = $entry->auxtype([$new])
+
+Gets or sets the auxiliary type.  This is a number between 0x0000 and
+0xFFFF.  Its meaning depends on the filetype.
+
+=item $creation_date = $entry->created([$date])
+
+Gets or sets the creation date and time in ProDOS format.
+
+=item $modification_date = $entry->modified([$date])
+
+Gets or sets the modification date and time in ProDOS format.
+
+=item $name = $entry->name([$new])
+
+Gets or sets the filename.
+
+=item $type = $entry->type([$new])
+
+Gets or sets the filetype.  This is a number between 0x00 and 0xFF.
+Use C<parse_type> to convert it to a more meaningful abbreviation.
+
+=item $type = $entry->short_type
+Returns the standard abbreviation for the filetype.  It is equivalent
+to calling C<AppleII::ProDOS::parse_type($entry-E<gt>type)>.
+
+=back
+
+The following methods allow access to read-only fields.  They can be
+used to initialize a DirEntry object created with C<new>, but raise an
+exception if the field already has a value.
+
+=over 4
+
+=item $block = $entry->block([$new])
+
+Gets or sets the key block for the file.
+
+=item $used = $entry->blks_used([$new])
+
+Gets or sets the number of blocks used by the file.
+
+=item $entry_num = $entry->num([$new])
+
+Gets or sets the entry number in the directory.
+
+=item $size = $entry->size([$new])
+
+Gets or sets the size of the file in bytes.
+
+=item $storage = $entry->storage([$new])
+
+Gets or sets the storage type.
+
+=back
+
+=head1 NOTE
+
+This is the point where I ran out of steam in documentation
+writing. :-)  If I get at least one email from someone who'd actually
+read the rest of this documentation, I'll try to finish it.
+
+=head2 C<AppleII::ProDOS::File>
+
+C<AppleII::ProDOS::File> represents a file's data and other attributes.
+
+=head2 C<AppleII::ProDOS::Bitmap>
+
+C<AppleII::ProDOS::Bitmap> represents the volume bitmap.
+
+=head2 C<AppleII::ProDOS::Index>
+
+C<AppleII::ProDOS::Index> represents an index block.
+
+=head1 BUGS
+
+=over 4
+
+=item *
+
+This document isn't finished yet.  I haven't been working on it
+recently, so I decided I might as well just release what I have.  If
+somebody writes me, I'm more likely to finish.  (That's a hint, folks.)
+
+=item *
+
+Mixed case filenames (ala GS/OS) are not supported.  All filenames are
+converted to upper case.
+
+=head1 AUTHOR
+
+Christopher J. Madsen E<lt>F<ac608@yfn.ysu.edu>E<gt>
+
+=cut
+
 # Local Variables:
-# tmtrack-file-task: "AppleII::ProDOS.pm"
+# tmtrack-file-task: "LibA2: AppleII::ProDOS.pm"
 # End:
