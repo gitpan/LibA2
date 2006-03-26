@@ -1,6 +1,6 @@
-#!perl
+#! /usr/bin/perl
 #---------------------------------------------------------------------
-# awp2txt.pl 0.005 (26-Feb-1997 03:38:49 GMT)
+# $Id: awp2txt 1300 2006-03-25 05:55:28Z cjm $
 # Copyright 1996 Christopher J. Madsen
 #
 # This program is free software; you can redistribute it and/or modify
@@ -13,6 +13,8 @@
 #
 # Convert AppleWorks word processor files to text files
 #---------------------------------------------------------------------
+
+our $VERSION = '0.005';
 
 foreach $filename (@ARGV) {
     die "$filename: not a normal file" unless -f $filename;
@@ -86,7 +88,7 @@ B<awp2txt> FILE [FILE ...]
 =head1 DESCRIPTION
 
 B<awp2txt> converts AppleWorks word processor files to plain text
-file.  For each FILE specified on the command line, it writes the
+files.  For each FILE specified on the command line, it writes the
 contents to FILE.txt.  The original files are not changed.  If
 FILE.txt already exists, it is I<not> overwritten.
 
@@ -100,7 +102,7 @@ There are no known bugs.
 
 =head1 AUTHOR
 
-Christopher J. Madsen E<lt>F<ac608@yfn.ysu.edu>E<gt>
+Christopher J. Madsen E<lt>F<cjm@pobox.com>E<gt>
 
 =cut
 

@@ -1,11 +1,11 @@
 #---------------------------------------------------------------------
 package AppleII::ProDOS;
 #
-# Copyright 1996 Christopher J. Madsen
+# Copyright 1996-2006 Christopher J. Madsen
 #
-# Author: Christopher J. Madsen <ac608@yfn.ysu.edu>
+# Author: Christopher J. Madsen <cjm@pobox.com>
 # Created: 26 Jul 1996
-# Version: 0.026 (25-Feb-1997)
+# $Id: ProDOS.pm 1301 2006-03-26 21:14:53Z cjm $
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
@@ -19,9 +19,10 @@ package AppleII::ProDOS;
 #---------------------------------------------------------------------
 
 require 5.000;
-use AppleII::Disk 0.009;
+use AppleII::Disk 0.04;
 use Carp;
 use POSIX 'mktime';
+use bytes;
 use strict;
 use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION $AUTOLOAD);
 
@@ -53,10 +54,7 @@ my %dir_methods = (
 
 BEGIN
 {
-    # Convert RCS revision number to d.ddd format:
-    ' 0.026 ' =~ / (\d+)\.(\d{1,3})(\.[0-9.]+)? /
-        or die "Invalid version number";
-    $VERSION = $VERSION = sprintf("%d.%03d%s",$1,$2,$3);
+    $VERSION = '0.04';
 } # end BEGIN
 
 # Filetype list from About Apple II File Type Notes -- June 1992
@@ -113,6 +111,7 @@ sub new
     my ($type, $name, $diskSize, $filename, $mode) = @_;
 
     a2_croak("Invalid name `$name'") unless valid_name($name);
+    $name = uc $name;
 
     my $disk = AppleII::Disk->new($filename, ($mode || '') . 'rw');
     $disk->blocks($diskSize);
@@ -270,7 +269,7 @@ sub a2_croak
 sub pack_date
 {
     my ($minute,$hour,$day,$month,$year) = (localtime($_[0]))[1..5];
-    pack('vC2', ($year<<9) + (($month+1)<<5) + $day, $minute, $hour);
+    pack('vC2', (($year%100)<<9) + (($month+1)<<5) + $day, $minute, $hour);
 } # end AppleII::ProDOS::pack_date
 
 #---------------------------------------------------------------------
@@ -437,6 +436,7 @@ package AppleII::ProDOS::Bitmap;
 #---------------------------------------------------------------------
 
 use Carp;
+use bytes;
 use strict;
 use vars '@ISA';
 
@@ -479,10 +479,10 @@ sub new
         push @blocks, $startBlock++;
     } while ($diskSize -= 0x1000) > 0;
 
-    $self->mark([ 0 .. @blocks[-1] ], 0); # Mark initial blocks as used
+    $self->mark([ 0 .. $blocks[-1] ], 0); # Mark initial blocks as used
 
     $self->{bitmap} =
-        $disk->pad_block($self->{bitmap},"\0",($#blocks+1) * 0x200);
+        AppleII::Disk::pad_block($self->{bitmap},"\0",($#blocks+1) * 0x200);
     $self->{blocks} = \@blocks;
     $self->{free} = unpack('%32b*', $self->{bitmap});
 
@@ -653,6 +653,7 @@ package AppleII::ProDOS::Directory;
 AppleII::ProDOS->import(qw(a2_croak pack_date pack_name parse_name
                            short_date valid_date valid_name));
 use Carp;
+use bytes;
 use strict;
 use vars '@ISA';
 
@@ -691,7 +692,7 @@ sub new
         blocks  => $blocks,
         disk    => $disk,
         entries => [],
-        name    => $name,
+        name    => uc $name,
         version => "\0\0",
         created => pack_date(time),
         _permitted => \%dir_fields,
@@ -909,6 +910,7 @@ sub new_dir
     my ($self, $dir, $size) = @_;
 
     a2_croak("Invalid name `$dir'") unless valid_name($dir);
+    $dir = uc $dir;
 
     $size = 1 unless $size;
     $size = int(($size + 0xD) / 0xD); # Compute # of blocks (+ dir header)
@@ -1122,6 +1124,7 @@ package AppleII::ProDOS::DirEntry;
 AppleII::ProDOS->import(qw(pack_date pack_name parse_name parse_type
                            valid_date valid_name));
 use integer;
+use bytes;
 use strict;
 use vars '@ISA';
 
@@ -1215,6 +1218,8 @@ package AppleII::ProDOS::File;
 
 AppleII::ProDOS->import(qw(a2_croak valid_date valid_name));
 use Carp;
+use bytes;
+use strict;
 use vars qw(@ISA);
 
 @ISA = 'AppleII::ProDOS::DirEntry';
@@ -1242,13 +1247,14 @@ sub new
 {
     my ($type, $name, $data) = @_;
     a2_croak("Invalid name `$name'") unless valid_name($name);
+
     my $self = {
         access     => 0xE3,
         auxtype    => 0,
         created    => "\0\0\0\0",
         data       => $data,
         modified   => "\0\0\0\0",
-        name       => $name,
+        name       => uc $name,
         size       => length($data),
         type       => 0,
         version    => "\0\0",
@@ -1284,30 +1290,40 @@ sub open
                     storage type version);
     @{$self}{@fields} = @{$entry}{@fields};
 
-    my ($storage, $keyBlock, $blksUsed, $size) =
-        @{$entry}{qw(storage block blksUsed size)};
+    my ($storage, $keyBlock, $size) =
+        @{$entry}{qw(storage block size)};
 
     my $data;
     if ($storage == 1) {
         $data = $disk->read_block($keyBlock);
-    } elsif ($storage == 2) {
-        my $index = AppleII::ProDOS::Index->open($disk,$keyBlock,$blksUsed-1);
+    } else {
+      # Calculate the number of data blocks:
+      #   (In a sparse file, not all these blocks
+      #    are actually allocated.)
+      my $blksUsed = int(($size + 0x1FF) / 0x200);
+
+      if ($storage == 2) {
+        my $index = AppleII::ProDOS::Index->open($disk,$keyBlock,$blksUsed);
         $data = $disk->read_blocks($index->blocks);
-    } elsif ($storage == 3) {
-        my $blksUsed    = int(($size + 0x1FF) / 0x200);
+      } elsif ($storage == 3) {
         my $indexBlocks = int(($blksUsed + 0xFF) / 0x100);
         my $index = AppleII::ProDOS::Index->open($disk,$keyBlock,$indexBlocks);
         my (@blocks,$block);
         foreach $block (@{$index->blocks}) {
+          if ($block) {
             my $subindex = AppleII::ProDOS::Index->open($disk,$block);
             push @blocks,@{$subindex->blocks};
-        }
+          } else {
+            push @blocks, (0) x 0x100; # Sparse index block
+          }
+        } # end foreach subindex block
         $#blocks = $blksUsed-1; # Use only the first $blksUsed blocks
         $data = $disk->read_blocks(\@blocks);
         $self->{indexBlocks} = $indexBlocks;
-    } else {
+      } else {
         croak("Unsupported storage type $storage");
-    }
+      }
+    } # end else not a seedling file
 
     substr($data, $size) = '' if length($data) > $size;
     $self->{'data'} = $data;
@@ -1337,7 +1353,7 @@ sub allocate_space
 
     my $storage = $self->{storage};
 
-    $self->{block} = @blocks[0];
+    $self->{block} = $blocks[0];
 
     shift @blocks if $storage > 1; # Remove index block from list
 
@@ -1360,7 +1376,7 @@ sub as_text
 {
     my $self = shift;
     my $data = $self->{data};
-    $data =~ tr/\r\x8D\x80-\xFF/\n\n\x00-\x7F/;
+    $data =~ tr/\x0D\x8D\x80-\xFF/\n\n\x00-\x7F/;
     $data;
 } # end AppleII::ProDOS::File::as_text
 
@@ -1417,6 +1433,7 @@ package AppleII::ProDOS::Index;
 #---------------------------------------------------------------------
 
 use integer;
+use bytes;
 use strict;
 use vars '@ISA';
 
@@ -1506,7 +1523,7 @@ sub write_disk
     $dataHi =~ s/[\s\S]([\s\S])/$1/g; # Keep just the high byte
 
     $disk->write_block($self->{block},
-                       $disk->pad_block($dataLo,"\0",0x100) . $dataHi,
+                       AppleII::Disk::pad_block($dataLo,"\0",0x100) . $dataHi,
                        "\0");
 } # end AppleII::ProDOS::Index::write_disk
 
@@ -1887,7 +1904,7 @@ converted to upper case.
 
 =head1 AUTHOR
 
-Christopher J. Madsen E<lt>F<ac608@yfn.ysu.edu>E<gt>
+Christopher J. Madsen E<lt>F<cjm@pobox.com>E<gt>
 
 =cut
 

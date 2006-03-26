@@ -1,11 +1,11 @@
 #---------------------------------------------------------------------
 package AppleII::Disk;
 #
-# Copyright 1996 Christopher J. Madsen
+# Copyright 1996-2006 Christopher J. Madsen
 #
-# Author: Christopher J. Madsen <ac608@yfn.ysu.edu>
+# Author: Christopher J. Madsen <cjm@pobox.com>
 # Created: 25 Jul 1996
-# Version: 0.009 (14-Aug-1996)
+# $Id: Disk.pm 1296 2006-03-24 21:50:06Z cjm $
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
@@ -20,24 +20,18 @@ package AppleII::Disk;
 
 require 5.000;
 use Carp;
-use FileHandle;
+use IO::File;
 use strict;
-use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
+use vars qw($VERSION);
 
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw();
-@EXPORT_OK = qw();
+use bytes;
 
 #=====================================================================
 # Package Global Variables:
 
 BEGIN
 {
-    # Convert RCS revision number to d.ddd format:
-    ' 0.009 ' =~ / (\d+)\.(\d{1,3})(\.[0-9.]+)? /
-        or die "Invalid version number";
-    $VERSION = $VERSION = sprintf("%d.%03d%s",$1,$2,$3);
+  $VERSION = '0.04';
 } # end BEGIN
 
 #=====================================================================
@@ -46,7 +40,7 @@ BEGIN
 # Member Variables:
 #   filename:  The pathname of the disk image file
 #   writable:  True if the image is opened in read/write mode
-#   file:      The FileHandle attached to the image file
+#   file:      The IO::File attached to the image file
 #   actlen:    The size of the image file in bytes
 #   maxlen:    The maximum allowable size of the image file in bytes
 #---------------------------------------------------------------------
@@ -69,22 +63,21 @@ sub new
     my $self = {};
     $self->{filename} = $filename;
 
-    my $file = new FileHandle;
+    my $file = IO::File->new;
 
     $mode = 'r' unless $mode;
     my $openMode = '<';
     if ($mode =~ /w/) {
         $self->{writable} = 1;
         $openMode = '+<';
-        $file->open(">$filename") or croak("Couldn't create `$filename'")
-            if not -e $filename; # Create empty file
+        $openMode = '+>' if not -e $filename; # Create empty file
     } # end if writable
 
-    $file->open("$openMode$filename") or croak("Couldn't open `$filename'");
-    binmode $file;
+    $file->open($filename, $openMode) or croak("Couldn't open `$filename': $!");
+    $file->binmode;
 
     $self->{file}   = $file;
-    $self->{actlen} = (stat $file)[7]; # Get real size of file
+    $self->{actlen} = ($file->stat)[7]; # Get real size of file
     $self->{maxlen} = $self->{actlen};
 
     $type = 'AppleII::Disk::ProDOS' if $mode =~ /p/;
@@ -99,6 +92,8 @@ sub new
 #---------------------------------------------------------------------
 # Pad a block of data:
 #
+# This is a normal subroutine, NOT a method!
+#
 # Input:
 #   data:    The block to be padded
 #   pad:     The character to pad with (default "\0") or '' for no padding
@@ -111,13 +106,13 @@ sub new
 
 sub pad_block
 {
-    my ($self, $data, $pad, $length) = @_;
+    my ($data, $pad, $length) = @_;
 
     $pad    = "\0" unless defined $pad;
     $length = $length || 0x200;
 
     $data .= $pad x ($length - length($data))
-        if (defined $pad and length($data) < $length);
+        if (length($pad) and length($data) < $length);
 
     unless (length($data) == $length) {
         local $Carp::CarpLevel = $Carp::CarpLevel;
@@ -152,6 +147,23 @@ sub blocks
 } # end AppleII::Disk::blocks
 
 #---------------------------------------------------------------------
+# Extend the image file to its full size:
+
+sub fully_allocate
+{
+  my $self = shift;
+
+  if ($self->{maxlen} > $self->{actlen}) {
+    croak("Disk image is read/only") unless $self->{writable};
+
+    $self->{file}->truncate($self->{maxlen}) or croak "Can't extend file: $!";
+
+    $self->{actlen} = $self->{maxlen};
+  } # end if file is not already at maximum size
+
+} # end AppleII::Disk::fully_allocate
+
+#---------------------------------------------------------------------
 # Read a ProDOS block:
 #
 # Input:
@@ -167,6 +179,11 @@ sub blocks
 #---------------------------------------------------------------------
 # Read a series of ProDOS blocks:
 #
+# As a special case, block 0 cannot be read by this method.  Instead,
+# it returns a block full of 0 bytes.  This is how sparse files are
+# implemented.  If you want to read the actual contents of block 0,
+# you must call $disk->read_block(0) directly.
+#
 # Input:
 #   blocks:  An array of block numbers to read
 #
@@ -175,12 +192,13 @@ sub blocks
 
 sub read_blocks
 {
-    my ($self, $blocks) = @_;
-    my $data = '';
-    foreach (@$blocks) {
-        $data .= $self->read_block($_);
-    }
-    $data;
+  my ($self, $blocks) = @_;
+  my $data = '';
+  foreach (@$blocks) {
+    if ($_) { $data .= $self->read_block($_) }
+    else    { $data .= "\0" x 0x200          } # Sparse block
+  }
+  $data;
 } # end AppleII::Disk::read_blocks
 
 #---------------------------------------------------------------------
@@ -249,7 +267,7 @@ package AppleII::Disk::ProDOS;
 #---------------------------------------------------------------------
 
 use Carp;
-use FileHandle;
+use bytes;
 use integer;
 use strict;
 use vars qw(@ISA);
@@ -308,11 +326,12 @@ sub write_block
     my ($self, $block, $data, $pad) = @_;
     croak("Disk image is read/only") unless $self->{writable};
 
-    $data = $self->pad_block($data, $pad || '');
+    $data = AppleII::Disk::pad_block($data, $pad || '');
 
-    $self->seek_block($block);
+    my $pos = $self->seek_block($block);
     print {$self->{file}} $data or die;
-    $self->{actlen} = (stat $self->{file})[7];
+
+    $self->{actlen} = $pos + 0x200 unless $self->{actlen} > $pos;
 } # end AppleII::Disk::ProDOS::write_block
 
 #=====================================================================
@@ -324,7 +343,7 @@ package AppleII::Disk::DOS33;
 #$debug = 1;
 
 use Carp;
-use FileHandle;
+use bytes;
 use integer;
 use strict;
 use vars qw(@ISA);
@@ -407,11 +426,12 @@ sub write_sector
     my ($self, $track, $sector, $data, $pad) = @_;
     croak("Disk image is read/only") unless $self->{writable};
 
-    $data = $self->pad_block($data, $pad || '', 0x100);
+    $data = AppleII::Disk::pad_block($data, $pad || '', 0x100);
 
-    $self->seek_sector($track, $sector);
+    my $pos = $self->seek_sector($track, $sector);
     print {$self->{file}} $data or die;
-    $self->{actlen} = (stat $self->{file})[7];
+
+    $self->{actlen} = $pos + 0x100 unless $self->{actlen} > $pos;
 } # end AppleII::Disk::DOS33::write_sector
 
 #---------------------------------------------------------------------
@@ -425,7 +445,7 @@ sub write_block
     croak("Disk image is read/only") unless $self->{writable};
     my ($track, $sector1, $sector2) = block2sector($block);
 
-    $data = $self->pad_block($data, $pad || '');
+    $data = AppleII::Disk::pad_block($data, $pad || '');
 
     $self->write_sector($track, $sector1, substr($data,0,0x100));
     $self->write_sector($track, $sector2, substr($data,0x100,0x100));
@@ -501,7 +521,11 @@ read.
 =item $contents = $disk->read_blocks(\@blocks)
 
 Reads a sequence of blocks from the disk image.  C<\@blocks> is a
-reference to an array of block numbers.
+reference to an array of block numbers.  As a special case, block 0
+cannot be read by this method.  Instead, it returns a block full of 0
+bytes.  This is how sparse files are implemented.  If you want to read
+the actual contents of block 0, you must call $disk->read_block(0)
+directly.
 
 =item $contents = $disk->read_sector($track, $sector)
 
@@ -534,7 +558,7 @@ sector with (out to 256 bytes).  If C<$pad> is omitted or null, then
 C<$contents> must be exactly 256 bytes.  This is currently implemented
 only for DOS 3.3 order images.
 
-=item $padded = AppleII::Disk->pad_block($data, [$pad, [$length]])
+=item $padded = AppleII::Disk::pad_block($data, [$pad, [$length]])
 
 Pads C<$data> out to C<$length> bytes with C<$pad>.  Returns the
 padded string; the original is not altered.  Dies if C<$data> is
@@ -545,14 +569,15 @@ If C<$pad> is the null string (not undef), just checks to make sure
 that C<$data> is exactly C<$length> bytes and returns the original
 string.  Dies if C<$data> is not exactly C<$length> bytes.
 
-C<pad_block> can be called either as C<AppleII::Disk-E<gt>pad_block>
-or C<$disk-E<gt>pad_block>.
+C<pad_block> is a subroutine, not a method, and is not exported.  You
+probably don't need to call it directly anyway, because the
+C<write_XXX> methods will call it for you.
 
 =back
 
 =head1 AUTHOR
 
-Christopher J. Madsen E<lt>F<ac608@yfn.ysu.edu>E<gt>
+Christopher J. Madsen E<lt>F<cjm@pobox.com>E<gt>
 
 =cut
 

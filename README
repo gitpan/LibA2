@@ -1,4 +1,4 @@
-LibA2	Release 0.003
+LibA2	Release 0.04
 Copyright 1996 Christopher J. Madsen
 
 LibA2 provides both end-user utilities and library modules for
@@ -20,8 +20,8 @@ Please send comments, questions, bug reports, and patches to me.
 You'll find my email address at the end of this file.
 
 The included utilities are:
-    prodos.pl		version 0.010
-	`prodos.pl' is the main end-user utility.  It provides a
+    prodos		version 0.04
+	`prodos' is the main end-user utility.  It provides a
 	Unix-style shell for accessing ProDOS volumes.  This allows
 	you to list the contents of disk images, create
 	subdirectories, and copy files to & from disk images.  If you
@@ -29,35 +29,35 @@ The included utilities are:
 	the shell will have better editing, command & filename
 	completion, and a command history.
 
-	The parameters for prodos.pl are:
+	The parameters for prodos are:
 		prodos IMAGE_FILE
 
-    pro_fmt.pl		version 0.003
-	`pro_fmt.pl' creates blank ProDOS disk images.  The images are
+    pro_fmt		version 0.04
+	`pro_fmt' creates blank ProDOS disk images.  The images are
 	NOT bootable, because they lack the necessary code in the boot
 	blocks.  You can copy blocks 0 and 1 from a bootable disk to
-	fix this.  The parameters for pro_fmt.pl are:
+	fix this.  The parameters for pro_fmt are:
 		pro_fmt VOLUME_NAME  SIZE_IN_BLOCKS  IMAGE_FILE
 	This is likely to change in the future.
 
-    pro_opt.pl		version 0.004
-	`pro_opt.pl' removes unused space from ProDOS disk images.  This
+    pro_opt		version 0.04
+	`pro_opt' removes unused space from ProDOS disk images.  This
 	is most useful for reducing the size of hard disk images.  It
 	doesn't use any form of compression; it simply moves
 	everything to the beginning of the disk, squashing out empty
 	space caused by deleting files.  Be careful with this, as it's
-	likely to have some bugs left.  The parameters for pro_opt.pl are:
+	likely to have some bugs left.  The parameters for pro_opt are:
 		pro_opt SOURCE_IMAGE_FILE  DESTINATION_IMAGE_FILE
 
-    awp2txt.pl		version 0.005
-	`awp2txt.pl' converts AppleWorks word processor files into text
+    awp2txt		version 0.005
+	`awp2txt' converts AppleWorks word processor files into text
 	files.  This is a bit out of place in LibA2, because it has
 	nothing to do with disk images, but I included it because
 	users of LibA2 may find it useful.  The parameters for awp2txt are:
 		awp2txt FILE ...
 
-    var_display.pl	version 1.004
-	`var_display.pl' lists the contents of an Applesoft BASIC VAR file.
+    var_display		version 1.004
+	`var_display' lists the contents of an Applesoft BASIC VAR file.
 	Currently, it can only display string variables and string arrays.
 	Like awp2txt, you must first extract the VAR file from the disk
 	image.  The parameters for var_display are:
@@ -69,7 +69,7 @@ images.  DOS 3.3 disks are not currently supported (except by
 AppleII::Disk, which doesn't care what kind of data is on the disk).
 
 The included modules are:
-    AppleII::Disk	version 0.009
+    AppleII::Disk	version 0.04
 	`AppleII::Disk' provides block-level access to disk images.
 	It's useful because there are two main formats for Apple disk
 	images:  ProDOS order and DOS 3.3 order.  These formats do not
@@ -77,43 +77,41 @@ The included modules are:
 	order in which the data appears.  AppleII::Disk takes care of
 	the differences for you.
 
-    AppleII::ProDOS	version 0.026
+    AppleII::ProDOS	version 0.04
 	`AppleII::ProDOS' provides tools for accessing files on ProDOS
-	disk images.  `prodos.pl' is basically just a wrapper around
+	disk images.  `prodos' is basically just a wrapper around
 	AppleII::ProDOS.
 
 CHANGES
-    Here's what's new in version 0.003 of LibA2:
+    Here's what's new in version 0.04 of LibA2:
     (See the file `Changes' for the full revision history.)
       
-	First beta release of LibA2
-      
-	New utilities:
-	  var_display.pl      version 1.004
+	Now uses Module::Build instead of ExtUtils::MakeMaker
+	You can use --no-scripts with Build.PL to avoid installing utility scripts
+	Now has tests for AppleII::Disk & AppleII::ProDOS
+	Removed the .pl extension from utility scripts
       
 	Updated utilities:
-	  awp2txt.pl	      version 0.005
-	    Includes documentation
+	  prodos	      version 0.04
+	    Fixed to work with current Term::ReadLine::Perl
+	    Added md as an alias for mkdir
       
-	  prodos.pl	      version 0.010
-	    Includes documentation
-	    Supports an external pager for long text displays
+	  pro_fmt	      version 0.04
+	    Now has command line options (try --help for a list)
       
-	  pro_opt.pl	      version 0.004
-	    Includes documentation
-	    Now runs much faster
+	  pro_opt	      version 0.04
+	    Updated documentation
       
 	Updated modules:
-	  AppleII::Disk       version 0.009
-	    Includes documentation
-	    Added blocks method to get/set disk size
+	  AppleII::Disk       version 0.04
+	    INCOMPATIBLE CHANGE:  pad_block is now just a subroutine, not a method
+	    Uses IO::File instead of FileHandle
+	    The read_blocks method now treats block 0 specially
       
-	  AppleII::ProDOS     version 0.026
-	    Includes documentation (still incomplete)
-	    Adding a file to a full subdirectory automatically expands the
-	      subdirectory.
-	    Allocating free blocks is now much more efficient.	This make
-	      the volume optimizer (pro_opt.pl) much much faster.
+	  AppleII::ProDOS     version 0.04
+	    Can now read sparse files correctly
+	    Fixed some places where filenames weren't being uppercased
+	    Fixed a Y2K issue in converting timestamps to ProDOS format
       
 LICENSE
 	LibA2 is free software; you can redistribute it and/or modify
@@ -126,27 +124,20 @@ LICENSE
 	for more details.
 
 BUGS
-    If you use Unix or a similar operating system
-	The utilities don't have the executable attribute set.  Sorry,
-	but I use OS/2 and can't figure out how to create tar archives
-	with the executable bit set.  Please change into the `bin'
-	directory and type `chmod a+x *.pl'.  If you know of a better
-	way of fixing this, please let me know.
-
     Documentation
 	There isn't enough.  Yet.  If you'd like to read it, send
 	email.  If I think people want to read it, I'm far more likely
 	to write it. :-)  Until then, use the source, Luke.
 
-    prodos.pl
+    prodos
 	There's no way to copy a file from a disk image under another
 	name.  This may cause problems under MS-DOS when extracting
 	files that don't meet its 8.3 filename limitations.
-	Solution: Upgrade to OS/2 and use HPFS. :-)
+	Solution: Upgrade to a real operating system.
 
-    pro_fmt.pl
+    pro_fmt
 	The disk images it creates aren't bootable unless you copy the
 	boot blocks from a bootable disk.
 
 AUTHOR
-	Christopher J. Madsen <ac608@yfn.ysu.edu>
+	Christopher J. Madsen <cjm@pobox.com>

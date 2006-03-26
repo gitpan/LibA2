@@ -1,6 +1,6 @@
-#!perl
+#! /usr/bin/perl
 #---------------------------------------------------------------------
-# var_display.pl 1.004 (26-Feb-1997 02:31:29 GMT)
+# $Id: var_display 1300 2006-03-25 05:55:28Z cjm $
 # Copyright 1996 Christopher J. Madsen
 #
 # This program is free software; you can redistribute it and/or modify
@@ -15,6 +15,8 @@
 #
 # See January 1986 Nibble (Vol 7/No 1), p.76 for more about VAR files
 #---------------------------------------------------------------------
+
+our $VERSION = '1.004';
 
 *ARG = *_;
 use strict;
@@ -158,7 +160,7 @@ it.  If you do, send email!
 
 =head1 AUTHOR
 
-Christopher J. Madsen E<lt>F<ac608@yfn.ysu.edu>E<gt>
+Christopher J. Madsen E<lt>F<cjm@pobox.com>E<gt>
 
 =cut
 

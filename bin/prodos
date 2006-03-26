@@ -1,6 +1,6 @@
-#!perl
+#! /usr/bin/perl
 #---------------------------------------------------------------------
-# prodos.pl 0.010 (26-Feb-1997 02:35:36 GMT)
+# $Id: prodos 1302 2006-03-26 21:15:12Z cjm $
 # Copyright 1996 Christopher J. Madsen
 #
 # This program is free software; you can redistribute it and/or modify
@@ -17,6 +17,8 @@
 use AppleII::ProDOS qw(0.016 shell_wc);
 use Term::ReadLine;
 
+our $VERSION = '0.04';
+
 my $maxscreen = 20;
 my $pager     = $ENV{PAGER};
 my $shell     = $ENV{SHELL} || '/bin/sh';
@@ -26,7 +28,7 @@ my @commands = qw(cd dir get lcd ls ll mkdir put pwd quit type);
 
 my $term = Term::ReadLine->new('ProDOS Shell');
 
-if ($term->ReadLine eq 'Term::ReadLine::readline_pl') {
+if ($term->ReadLine eq 'Term::ReadLine::Perl') {
     $readline::rl_basic_word_break_characters     = ". \t\n";
     $readline::rl_completer_word_break_characters =
     $readline::rl_completer_word_break_characters = " \t\n";
@@ -53,12 +55,15 @@ while (1) {
         print("Use `dir' or `type' instead\a\n"),next CMD if $cmd eq 'cat';
         print($vol->path($arg),"\n"),        next CMD if $cmd eq 'cd';
         display($vol->catalog,"\n"),         next CMD if $cmd =~ /^l[sl]$/
-            or                                           $cmd eq 'dir';
+            or                                           $cmd eq 'dir'
+            or                                           $cmd eq 'v';
         display($vol->get_file($arg)->as_text),next CMD if $cmd eq 'type';
         get_file($vol,$arg),                 next CMD if $cmd eq 'get';
         put_file($vol,$arg),                 next CMD if $cmd eq 'put';
-        $vol->new_dir($arg),                 next CMD if $cmd eq 'mkdir';
-        (chdir($arg) || die "Bad directory"),next CMD if $cmd eq 'lcd';
+        $vol->new_dir($arg),                 next CMD if $cmd eq 'mkdir'
+            or                                           $cmd eq 'md';
+        (chdir($arg) || print "Bad directory `$arg'\a\n"),
+                                             next CMD if $cmd eq 'lcd';
         system($shell),                      next CMD if $cmd eq '!';
         system(substr("$cmd $arg",1)),       next CMD if $cmd =~ /^!/;
         print "Bad command `$cmd'\a\n";
@@ -159,7 +164,7 @@ ProDOS volume.
 Change the current directory on the ProDOS volume to I<PATH>.  Use
 B<lcd> to change the directory on the native filesystem.
 
-=item B<dir>, B<ls>, or B<ll>
+=item B<dir>, B<ls>, B<ll>, or B<v>
 
 List the contents of the current directory on the ProDOS volume.
 
@@ -174,7 +179,8 @@ B<cd> to change the directory on the ProDOS volume.
 
 =item B<mkdir> I<DIRECTORY>
 
-Create a new subdirectory on the ProDOS volume.
+Create a new subdirectory on the ProDOS volume.  You can use B<md> as
+an alias to B<mkdir>.
 
 =item B<put> I<FILE>
 
@@ -200,7 +206,9 @@ Start a subshell.
 
 =head1 REQUIREMENTS
 
-B<prodos> requires Term::ReadLine, available on CPAN.
+B<prodos> requires Term::ReadLine, which is now distributed with Perl.
+For best results, you should also have Term::ReadLine::Perl, which is
+available on CPAN.
 
 It also requires the modules AppleII::ProDOS and AppleII::Disk,
 which are included with LibA2.
@@ -218,7 +226,7 @@ left it out.
 
 =head1 AUTHOR
 
-Christopher J. Madsen E<lt>F<ac608@yfn.ysu.edu>E<gt>
+Christopher J. Madsen E<lt>F<cjm@pobox.com>E<gt>
 
 =cut
 
