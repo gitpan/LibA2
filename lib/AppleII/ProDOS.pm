@@ -5,7 +5,7 @@ package AppleII::ProDOS;
 #
 # Author: Christopher J. Madsen <cjm@pobox.com>
 # Created: 26 Jul 1996
-# $Id: ProDOS.pm 1301 2006-03-26 21:14:53Z cjm $
+# $Id: ProDOS.pm 1314 2006-03-28 00:27:55Z cjm $
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
@@ -1669,7 +1669,7 @@ Gets or sets the current path.  C<$newpath> is the new pathname, which
 may be either relative or absolute.  `..' may be used to specify the
 parent directory, but this must occur at the beginning of the path
 (`../../dir' is valid, but `../dir/..' is not).
-If c<$newpath>> is omitted, then the current path is not changed.
+If C<$newpath> is omitted, then the current path is not changed.
 Returns the current path as a string beginning and ending with C</>.
 
 =item $catalog = $vol->catalog
@@ -1901,6 +1901,8 @@ somebody writes me, I'm more likely to finish.  (That's a hint, folks.)
 
 Mixed case filenames (ala GS/OS) are not supported.  All filenames are
 converted to upper case.
+
+=back
 
 =head1 AUTHOR
 

@@ -5,7 +5,7 @@ package AppleII::Disk;
 #
 # Author: Christopher J. Madsen <cjm@pobox.com>
 # Created: 25 Jul 1996
-# $Id: Disk.pm 1296 2006-03-24 21:50:06Z cjm $
+# $Id: Disk.pm 1314 2006-03-28 00:27:55Z cjm $
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
@@ -31,7 +31,7 @@ use bytes;
 
 BEGIN
 {
-  $VERSION = '0.04';
+  $VERSION = '0.05';
 } # end BEGIN
 
 #=====================================================================
@@ -74,7 +74,7 @@ sub new
     } # end if writable
 
     $file->open($filename, $openMode) or croak("Couldn't open `$filename': $!");
-    $file->binmode;
+    binmode $file; # binmode didn't become a method until IO::File 1.11
 
     $self->{file}   = $file;
     $self->{actlen} = ($file->stat)[7]; # Get real size of file

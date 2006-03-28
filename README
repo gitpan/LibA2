@@ -1,4 +1,4 @@
-LibA2	Release 0.04
+LibA2	Release 0.05
 Copyright 1996 Christopher J. Madsen
 
 LibA2 provides both end-user utilities and library modules for
@@ -69,7 +69,7 @@ images.  DOS 3.3 disks are not currently supported (except by
 AppleII::Disk, which doesn't care what kind of data is on the disk).
 
 The included modules are:
-    AppleII::Disk	version 0.04
+    AppleII::Disk	version 0.05
 	`AppleII::Disk' provides block-level access to disk images.
 	It's useful because there are two main formats for Apple disk
 	images:  ProDOS order and DOS 3.3 order.  These formats do not
@@ -83,35 +83,15 @@ The included modules are:
 	AppleII::ProDOS.
 
 CHANGES
-    Here's what's new in version 0.04 of LibA2:
+    Here's what's new in version 0.05 of LibA2:
     (See the file `Changes' for the full revision history.)
       
-	Now uses Module::Build instead of ExtUtils::MakeMaker
-	You can use --no-scripts with Build.PL to avoid installing utility scripts
-	Now has tests for AppleII::Disk & AppleII::ProDOS
-	Removed the .pl extension from utility scripts
-      
-	Updated utilities:
-	  prodos	      version 0.04
-	    Fixed to work with current Term::ReadLine::Perl
-	    Added md as an alias for mkdir
-      
-	  pro_fmt	      version 0.04
-	    Now has command line options (try --help for a list)
-      
-	  pro_opt	      version 0.04
-	    Updated documentation
+	Fixes for the build process (it didn't like spaces in pathnames)
+	If you got LibA2 0.04 to pass tests, you don't need to update.
       
 	Updated modules:
-	  AppleII::Disk       version 0.04
-	    INCOMPATIBLE CHANGE:  pad_block is now just a subroutine, not a method
-	    Uses IO::File instead of FileHandle
-	    The read_blocks method now treats block 0 specially
-      
-	  AppleII::ProDOS     version 0.04
-	    Can now read sparse files correctly
-	    Fixed some places where filenames weren't being uppercased
-	    Fixed a Y2K issue in converting timestamps to ProDOS format
+	  AppleII::Disk       version 0.05
+	    Now compatible with versions of IO::File older than 1.11
       
 LICENSE
 	LibA2 is free software; you can redistribute it and/or modify

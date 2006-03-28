@@ -1,6 +1,6 @@
 ---
 name: LibA2
-version: 0.04
+version: 0.05
 author:
   - Christopher J. Madsen <cjm@pobox.com>
 abstract: Apple II emulator & file utilities
@@ -16,13 +16,13 @@ dynamic_config: 1
 provides:
   AppleII::Disk:
     file: lib/AppleII/Disk.pm
-    version: 0.04
+    version: 0.05
   AppleII::Disk::DOS33:
     file: lib/AppleII/Disk.pm
-    version: 0.04
+    version: 0.05
   AppleII::Disk::ProDOS:
     file: lib/AppleII/Disk.pm
-    version: 0.04
+    version: 0.05
   AppleII::ProDOS:
     file: lib/AppleII/ProDOS.pm
     version: 0.04
