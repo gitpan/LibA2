@@ -1,7 +1,7 @@
 # Before `./Build install' is performed this script should be runnable with
 # `./Build test'. After `./Build install' it should work as `perl 20_ProDOS.t'
 #---------------------------------------------------------------------
-# $Id: 20_ProDOS.t 1306 2006-03-26 21:38:40Z cjm $
+# $Id: 20_ProDOS.t 1538 2006-10-09 03:37:20Z cjm $
 # Copyright 2006 Christopher J. Madsen
 #
 # This program is free software; you can redistribute it and/or modify
@@ -18,8 +18,8 @@
 use FindBin;
 
 use strict;
-use Test::More tests => 33;
-BEGIN { use_ok('AppleII::ProDOS') };
+use Test::More tests => 38;
+BEGIN { use_ok('AppleII::ProDOS', qw(pack_date)) }
 
 #---------------------------------------------------------------------
 # Simple RLE file decompression:
@@ -139,6 +139,9 @@ my $contents = "Hello, World!\x0D" x 256;
 my $file = AppleII::ProDOS::File->new('Sample.File', $contents);
 isa_ok($file, 'AppleII::ProDOS::File', 'Sample.File $file');
 
+$file->created( pack_date(1977, 1,  1));
+$file->modified(pack_date(1999, 3, 25, 12, 34));
+
 eval { $vol->put_file($file); };
 is($@, '', "Wrote Sample.File");
 
@@ -146,7 +149,7 @@ is($vol->catalog, <<'', 'Catalog /TESTDISK/SUBDIR after write');
 Name           Type Blocks  Modified        Created            Size Subtype
 SAPLING         TXT     3  23-Mar-06 19:52 23-Mar-06 19:50      531  $0000
 SPARSE.TREE     BIN     5  24-Mar-06 15:36 24-Mar-06 15:35   131106  $1000
-SAMPLE.FILE     NON     8  <No Date>       <No Date>           3584  $0000
+SAMPLE.FILE     NON     8  25-Mar-99 12:34  1-Jan-77  0:00     3584  $0000
 Blocks free: 252     Blocks used: 28     Total blocks: 280
 
 undef $file;
@@ -158,6 +161,31 @@ is($file->data, $contents, 'SAMPLE.FILE contents');
 
 $contents =~ s/\x0D/\n/g;
 is($file->as_text, $contents, 'SAMPLE.FILE as_text');
+
+#.....................................................................
+$contents = ("Another sparse tree file.\n" . ("\0" x 0x20400) .
+             "End of another sparse tree file.\n");
+
+$file = AppleII::ProDOS::File->new('sparser.tree', $contents);
+isa_ok($file, 'AppleII::ProDOS::File', 'sparser.tree $file');
+
+eval { $vol->put_file($file); };
+is($@, '', "Wrote sparser.tree");
+
+is($vol->catalog, <<'', 'Catalog /TESTDISK/SUBDIR after sparser.tree');
+Name           Type Blocks  Modified        Created            Size Subtype
+SAPLING         TXT     3  23-Mar-06 19:52 23-Mar-06 19:50      531  $0000
+SPARSE.TREE     BIN     5  24-Mar-06 15:36 24-Mar-06 15:35   131106  $1000
+SAMPLE.FILE     NON     8  25-Mar-99 12:34  1-Jan-77  0:00     3584  $0000
+SPARSER.TREE    NON     5  <No Date>       <No Date>         132155  $0000
+Blocks free: 247     Blocks used: 33     Total blocks: 280
+
+undef $file;
+
+$file = $vol->get_file('Sparser.Tree');
+isa_ok($file, 'AppleII::ProDOS::File', 'Read Sparser.Tree');
+
+is($file->data, $contents, 'Sparser.Tree contents');
 
 #---------------------------------------------------------------------
 # Finally, try the read tests again:

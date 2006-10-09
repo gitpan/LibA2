@@ -1,7 +1,7 @@
 # Before `./Build install' is performed this script should be runnable with
 # `./Build test'. After `./Build install' it should work as `perl 10_Disk.t'
 #---------------------------------------------------------------------
-# $Id: 10_Disk.t 1288 2006-03-22 04:53:45Z cjm $
+# $Id: 10_Disk.t 1317 2006-03-29 02:43:10Z cjm $
 # Copyright 2006 Christopher J. Madsen
 #
 # This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 
 use FindBin;
 
-use Test::More tests => 33;
+use Test::More tests => 36;
 BEGIN { use_ok('AppleII::Disk') };
 
 use bytes;
@@ -99,6 +99,14 @@ is($pd->read_block(272), ("D" x 256) . ("A" x 256), "Read block 272");
 is($pd->read_blocks([279, 0, 272]),
    ("C" x 256) . ("B" x 256) . ("\0" x 512) . ("D" x 256) . ("A" x 256),
    "Read blocks 279, NULL, 272");
+
+# write_blocks shouldn't alter block 0:
+eval { $pd->write_blocks([279, 0, 272], 'F' x 0x600) };
+is($@, '', 'Wrote blocks 279, 0, 272');
+
+is($pd->read_block(279), ("F" x 512), "Read block 279 again");
+
+is($pd->read_block(272), ("F" x 512), "Read block 272 again");
 
 is($pd->read_block(0), ('HI' x 128) . ("\0" x 256), "Read block 0 again");
 

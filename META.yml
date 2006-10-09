@@ -1,10 +1,12 @@
 ---
 name: LibA2
-version: 0.05
+version: 0.06
 author:
   - Christopher J. Madsen <cjm@pobox.com>
 abstract: Apple II emulator & file utilities
 license: perl
+resources:
+  license: http://dev.perl.org/licenses/
 requires:
   Getopt::Long: 2.10
   IO::File: 0
@@ -16,32 +18,27 @@ dynamic_config: 1
 provides:
   AppleII::Disk:
     file: lib/AppleII/Disk.pm
-    version: 0.05
+    version: 0.06
   AppleII::Disk::DOS33:
     file: lib/AppleII/Disk.pm
-    version: 0.05
   AppleII::Disk::ProDOS:
     file: lib/AppleII/Disk.pm
-    version: 0.05
   AppleII::ProDOS:
     file: lib/AppleII/ProDOS.pm
-    version: 0.04
+    version: 0.06
   AppleII::ProDOS::Bitmap:
     file: lib/AppleII/ProDOS.pm
-    version: 0.04
   AppleII::ProDOS::DirEntry:
     file: lib/AppleII/ProDOS.pm
-    version: 0.04
   AppleII::ProDOS::Directory:
     file: lib/AppleII/ProDOS.pm
-    version: 0.04
   AppleII::ProDOS::File:
     file: lib/AppleII/ProDOS.pm
-    version: 0.04
   AppleII::ProDOS::Index:
     file: lib/AppleII/ProDOS.pm
-    version: 0.04
   AppleII::ProDOS::Members:
     file: lib/AppleII/ProDOS.pm
-    version: 0.04
-generated_by: Module::Build version 0.2604
+generated_by: Module::Build version 0.28
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

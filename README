@@ -1,4 +1,4 @@
-LibA2	Release 0.05
+LibA2	Release 0.06
 Copyright 1996 Christopher J. Madsen
 
 LibA2 provides both end-user utilities and library modules for
@@ -35,10 +35,9 @@ The included utilities are:
     pro_fmt		version 0.04
 	`pro_fmt' creates blank ProDOS disk images.  The images are
 	NOT bootable, because they lack the necessary code in the boot
-	blocks.  You can copy blocks 0 and 1 from a bootable disk to
+	blocks.  You can copy blocks from a bootable disk image to
 	fix this.  The parameters for pro_fmt are:
-		pro_fmt VOLUME_NAME  SIZE_IN_BLOCKS  IMAGE_FILE
-	This is likely to change in the future.
+		pro_fmt [options] IMAGE_FILE
 
     pro_opt		version 0.04
 	`pro_opt' removes unused space from ProDOS disk images.  This
@@ -69,7 +68,7 @@ images.  DOS 3.3 disks are not currently supported (except by
 AppleII::Disk, which doesn't care what kind of data is on the disk).
 
 The included modules are:
-    AppleII::Disk	version 0.05
+    AppleII::Disk	version 0.06
 	`AppleII::Disk' provides block-level access to disk images.
 	It's useful because there are two main formats for Apple disk
 	images:  ProDOS order and DOS 3.3 order.  These formats do not
@@ -77,21 +76,23 @@ The included modules are:
 	order in which the data appears.  AppleII::Disk takes care of
 	the differences for you.
 
-    AppleII::ProDOS	version 0.04
+    AppleII::ProDOS	version 0.06
 	`AppleII::ProDOS' provides tools for accessing files on ProDOS
 	disk images.  `prodos' is basically just a wrapper around
 	AppleII::ProDOS.
 
 CHANGES
-    Here's what's new in version 0.05 of LibA2:
+    Here's what's new in version 0.06 of LibA2:
     (See the file `Changes' for the full revision history.)
       
-	Fixes for the build process (it didn't like spaces in pathnames)
-	If you got LibA2 0.04 to pass tests, you don't need to update.
-      
 	Updated modules:
-	  AppleII::Disk       version 0.05
-	    Now compatible with versions of IO::File older than 1.11
+	  AppleII::Disk       version 0.06
+	    The write_blocks method now treats block 0 specially
+      
+	  AppleII::ProDOS     version 0.06
+	    Can now write sparse files
+	    pack_date now accepts Date::Calc format dates
+	    Added unpack_date
       
 LICENSE
 	LibA2 is free software; you can redistribute it and/or modify
