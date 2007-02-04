@@ -1,6 +1,6 @@
 ---
 name: LibA2
-version: 0.06
+version: 0.07
 author:
   - Christopher J. Madsen <cjm@pobox.com>
 abstract: Apple II emulator & file utilities

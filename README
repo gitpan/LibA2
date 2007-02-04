@@ -1,4 +1,4 @@
-LibA2	Release 0.06
+LibA2	Release 0.07
 Copyright 1996 Christopher J. Madsen
 
 LibA2 provides both end-user utilities and library modules for
@@ -82,17 +82,11 @@ The included modules are:
 	AppleII::ProDOS.
 
 CHANGES
-    Here's what's new in version 0.06 of LibA2:
+    Here's what's new in version 0.07 of LibA2:
     (See the file `Changes' for the full revision history.)
       
-	Updated modules:
-	  AppleII::Disk       version 0.06
-	    The write_blocks method now treats block 0 specially
-      
-	  AppleII::ProDOS     version 0.06
-	    Can now write sparse files
-	    pack_date now accepts Date::Calc format dates
-	    Added unpack_date
+	I discovered that the --no-scripts install option was not working.
+	Only the Build.PL script was changed; no modules were updated.
       
 LICENSE
 	LibA2 is free software; you can redistribute it and/or modify
