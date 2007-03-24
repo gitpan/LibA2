@@ -1,10 +1,10 @@
 #---------------------------------------------------------------------
-# $Id: A2_Build.pm 1282 2006-03-21 17:36:38Z cjm $
+# $Id: A2_Build.pm 1719 2007-03-24 17:35:39Z cjm $
 package A2_Build;
 #
 # Copyright 2006 Christopher J. Madsen
 #
-# Author: Christopher J. Madsen <cjm@pobox.com>
+# Author: Christopher J. Madsen <perl@cjmweb.net>
 # Created: 13 Mar 2006
 #
 # This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@ use base 'Module::Build';
 #=====================================================================
 # Package Global Variables:
 
-our $VERSION = '0.04';
+our $VERSION = '0.08';
 
 #=====================================================================
 
@@ -65,9 +65,3 @@ sub ACTION_distdir
 # Package Return Value:
 
 1;
-
-__END__
-
-# Local Variables:
-# tmtrack-file-task: "LibA2: A2_Build.pm"
-# End:

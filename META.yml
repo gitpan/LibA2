@@ -1,8 +1,8 @@
 ---
 name: LibA2
-version: 0.07
+version: 0.08
 author:
-  - Christopher J. Madsen <cjm@pobox.com>
+  - Christopher J. Madsen <perl@cjmweb.net>
 abstract: Apple II emulator & file utilities
 license: perl
 resources:
@@ -10,22 +10,25 @@ resources:
 requires:
   Getopt::Long: 2.10
   IO::File: 0
+  POSIX: 0
   perl: 5.6.0
 build_requires:
   FindBin: 0
   Module::Build: 0
+recommends:
+  Term::ReadLine::Perl: 0
 dynamic_config: 1
 provides:
   AppleII::Disk:
     file: lib/AppleII/Disk.pm
-    version: 0.06
+    version: 0.08
   AppleII::Disk::DOS33:
     file: lib/AppleII/Disk.pm
   AppleII::Disk::ProDOS:
     file: lib/AppleII/Disk.pm
   AppleII::ProDOS:
     file: lib/AppleII/ProDOS.pm
-    version: 0.06
+    version: 0.08
   AppleII::ProDOS::Bitmap:
     file: lib/AppleII/ProDOS.pm
   AppleII::ProDOS::DirEntry:
@@ -38,7 +41,10 @@ provides:
     file: lib/AppleII/ProDOS.pm
   AppleII::ProDOS::Members:
     file: lib/AppleII/ProDOS.pm
-generated_by: Module::Build version 0.28
+generated_by: Module::Build version 0.2805
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
   version: 1.2
+no_index:
+  file:
+    - A2_Build.pm

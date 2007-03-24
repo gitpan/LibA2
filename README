@@ -1,4 +1,4 @@
-LibA2	Release 0.07
+LibA2	Release 0.08
 Copyright 1996 Christopher J. Madsen
 
 LibA2 provides both end-user utilities and library modules for
@@ -20,7 +20,7 @@ Please send comments, questions, bug reports, and patches to me.
 You'll find my email address at the end of this file.
 
 The included utilities are:
-    prodos		version 0.04
+    prodos		version 0.08
 	`prodos' is the main end-user utility.  It provides a
 	Unix-style shell for accessing ProDOS volumes.  This allows
 	you to list the contents of disk images, create
@@ -32,14 +32,14 @@ The included utilities are:
 	The parameters for prodos are:
 		prodos IMAGE_FILE
 
-    pro_fmt		version 0.04
+    pro_fmt		version 0.08
 	`pro_fmt' creates blank ProDOS disk images.  The images are
 	NOT bootable, because they lack the necessary code in the boot
 	blocks.  You can copy blocks from a bootable disk image to
 	fix this.  The parameters for pro_fmt are:
 		pro_fmt [options] IMAGE_FILE
 
-    pro_opt		version 0.04
+    pro_opt		version 0.08
 	`pro_opt' removes unused space from ProDOS disk images.  This
 	is most useful for reducing the size of hard disk images.  It
 	doesn't use any form of compression; it simply moves
@@ -48,14 +48,14 @@ The included utilities are:
 	likely to have some bugs left.  The parameters for pro_opt are:
 		pro_opt SOURCE_IMAGE_FILE  DESTINATION_IMAGE_FILE
 
-    awp2txt		version 0.005
+    awp2txt		version 0.08
 	`awp2txt' converts AppleWorks word processor files into text
 	files.  This is a bit out of place in LibA2, because it has
 	nothing to do with disk images, but I included it because
 	users of LibA2 may find it useful.  The parameters for awp2txt are:
 		awp2txt FILE ...
 
-    var_display		version 1.004
+    var_display		version 1.08
 	`var_display' lists the contents of an Applesoft BASIC VAR file.
 	Currently, it can only display string variables and string arrays.
 	Like awp2txt, you must first extract the VAR file from the disk
@@ -68,7 +68,7 @@ images.  DOS 3.3 disks are not currently supported (except by
 AppleII::Disk, which doesn't care what kind of data is on the disk).
 
 The included modules are:
-    AppleII::Disk	version 0.06
+    AppleII::Disk	version 0.08
 	`AppleII::Disk' provides block-level access to disk images.
 	It's useful because there are two main formats for Apple disk
 	images:  ProDOS order and DOS 3.3 order.  These formats do not
@@ -76,17 +76,19 @@ The included modules are:
 	order in which the data appears.  AppleII::Disk takes care of
 	the differences for you.
 
-    AppleII::ProDOS	version 0.06
+    AppleII::ProDOS	version 0.08
 	`AppleII::ProDOS' provides tools for accessing files on ProDOS
 	disk images.  `prodos' is basically just a wrapper around
 	AppleII::ProDOS.
 
 CHANGES
-    Here's what's new in version 0.07 of LibA2:
+    Here's what's new in version 0.08 of LibA2:
     (See the file `Changes' for the full revision history.)
       
-	I discovered that the --no-scripts install option was not working.
-	Only the Build.PL script was changed; no modules were updated.
+	Updated my email address and some documentation.
+	Added POD tests.
+	Added another fix for the --no-scripts install option.
+	There are no functional changes.
       
 LICENSE
 	LibA2 is free software; you can redistribute it and/or modify
@@ -115,4 +117,4 @@ BUGS
 	boot blocks from a bootable disk.
 
 AUTHOR
-	Christopher J. Madsen <cjm@pobox.com>
+	Christopher J. Madsen <perl AT cjmweb.net>
