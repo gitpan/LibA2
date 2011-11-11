@@ -5,7 +5,6 @@ package AppleII::Disk;
 #
 # Author: Christopher J. Madsen <perl@cjmweb.net>
 # Created: 25 Jul 1996
-# $Id: Disk.pm 1719 2007-03-24 17:35:39Z cjm $
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
@@ -15,24 +14,21 @@ package AppleII::Disk;
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See either the
 # GNU General Public License or the Artistic License for more details.
 #
-# Read/Write Apple II disk images
+# ABSTRACT: Block-level access to Apple II disk image files
 #---------------------------------------------------------------------
 
-require 5.000;
+use 5.006;
 use Carp;
 use IO::File;
 use strict;
-use vars qw($VERSION);
+use warnings;
 
 use bytes;
 
 #=====================================================================
 # Package Global Variables:
 
-BEGIN
-{
-  $VERSION = '0.08';
-} # end BEGIN
+our $VERSION = '0.09';
 
 #=====================================================================
 # Class AppleII::Disk:
@@ -275,9 +271,9 @@ use Carp;
 use bytes;
 use integer;
 use strict;
-use vars qw(@ISA);
+use warnings;
 
-@ISA = qw(AppleII::Disk);
+our @ISA = qw(AppleII::Disk);
 
 #---------------------------------------------------------------------
 # Read a block from a ProDOS order disk:
@@ -351,9 +347,9 @@ use Carp;
 use bytes;
 use integer;
 use strict;
-use vars qw(@ISA);
+use warnings;
 
-@ISA = qw(AppleII::Disk);
+our @ISA = qw(AppleII::Disk);
 
 #---------------------------------------------------------------------
 # Convert ProDOS block number to track & sectors:
@@ -466,6 +462,12 @@ __END__
 =head1 NAME
 
 AppleII::Disk - Block-level access to Apple II disk image files
+
+=head1 VERSION
+
+This document describes version 0.09 of
+AppleII::Disk, released November 11, 2011
+as part of LibA2 version 0.09.
 
 =head1 SYNOPSIS
 
@@ -591,20 +593,39 @@ C<write_XXX> methods will call it for you.
 
 =back
 
+=for Pod::Coverage
+^pad_block$
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+AppleII::Disk requires no configuration files or environment variables.
+
+=head1 INCOMPATIBILITIES
+
+None reported.
+
+=head1 BUGS AND LIMITATIONS
+
+No bugs have been reported.
+
 =head1 AUTHOR
 
-Christopher J. Madsen C<< <perl AT cjmweb.net> >>
+Christopher J. Madsen  S<C<< <perl AT cjmweb.net> >>>
 
-Please report any bugs or feature requests to
-C<< <bug-LibA2 AT rt.cpan.org> >>, or through the web interface
-at L<http://rt.cpan.org/Public/Bug/Report.html?Queue=LibA2>
+Please report any bugs or feature requests
+to S<C<< <bug-LibA2 AT rt.cpan.org> >>>
+or through the web interface at
+L<< http://rt.cpan.org/Public/Bug/Report.html?Queue=LibA2 >>.
 
+You can follow or contribute to LibA2's development at
+L<< http://github.com/madsen/perl-libA2 >>.
 
-=head1 LICENSE
+=head1 COPYRIGHT AND LICENSE
 
-This module is free software; you can redistribute it and/or
-modify it under the same terms as Perl itself. See L<perlartistic>.
+This software is copyright (c) 2011 by Christopher J. Madsen.
 
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =head1 DISCLAIMER OF WARRANTY
 

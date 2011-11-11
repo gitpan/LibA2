@@ -5,7 +5,6 @@ package AppleII::ProDOS;
 #
 # Author: Christopher J. Madsen <perl@cjmweb.net>
 # Created: 26 Jul 1996
-# $Id: ProDOS.pm 1719 2007-03-24 17:35:39Z cjm $
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
@@ -15,21 +14,21 @@ package AppleII::ProDOS;
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See either the
 # GNU General Public License or the Artistic License for more details.
 #
-# Read/write files on ProDOS disk images
+# ABSTRACT: Access files on Apple II ProDOS disk images
 #---------------------------------------------------------------------
 
-require 5.000;
-use AppleII::Disk 0.06;
+use 5.006;
+use AppleII::Disk 0.09;
 use Carp;
 use POSIX 'mktime';
 use bytes;
 use strict;
-use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION $AUTOLOAD);
+use warnings;
 
-require Exporter;
-@ISA = qw(AppleII::ProDOS::Members Exporter);
-@EXPORT = qw();
-@EXPORT_OK = qw(
+use Exporter 'import';
+our @ISA = qw(AppleII::ProDOS::Members);
+our @EXPORT = qw();
+our @EXPORT_OK = qw(
     pack_date pack_name parse_date parse_name parse_type shell_wc
     short_date unpack_date valid_date valid_name a2_croak
 );
@@ -52,10 +51,7 @@ my %dir_methods = (
 #=====================================================================
 # Package Global Variables:
 
-BEGIN
-{
-    $VERSION = '0.08';
-} # end BEGIN
+our $VERSION = '0.09';
 
 # Filetype list from About Apple II File Type Notes -- June 1992
 my @filetypes = qw(
@@ -231,7 +227,7 @@ sub path
 sub AUTOLOAD
 {
     my $self = $_[0];
-    my $name = $AUTOLOAD;
+    my $name = our $AUTOLOAD;
     $name =~ s/.*://;   # strip fully-qualified portion
     unless (ref($self) and exists $self->{'_dir_methods'}{$name}) {
         # Try to access a field by that name:
@@ -469,9 +465,9 @@ package AppleII::ProDOS::Bitmap;
 use Carp;
 use bytes;
 use strict;
-use vars '@ISA';
+use warnings;
 
-@ISA = 'AppleII::ProDOS::Members';
+our @ISA = 'AppleII::ProDOS::Members';
 
 # Map ProDOS bit order to Perl's vec():
 my @adjust = (7, 5, 3, 1, -1, -3, -5, -7);
@@ -686,9 +682,9 @@ AppleII::ProDOS->import(qw(a2_croak pack_date pack_name parse_name
 use Carp;
 use bytes;
 use strict;
-use vars '@ISA';
+use warnings;
 
-@ISA = 'AppleII::ProDOS::Members';
+our @ISA = 'AppleII::ProDOS::Members';
 
 my %dir_fields = (
     access      => 0xFF,
@@ -1157,9 +1153,9 @@ AppleII::ProDOS->import(qw(pack_date pack_name parse_name parse_type
 use integer;
 use bytes;
 use strict;
-use vars '@ISA';
+use warnings;
 
-@ISA = 'AppleII::ProDOS::Members';
+our @ISA = 'AppleII::ProDOS::Members';
 
 my %de_fields = (
     access      => 0xFF,
@@ -1251,9 +1247,9 @@ AppleII::ProDOS->import(qw(a2_croak valid_date valid_name));
 use Carp;
 use bytes;
 use strict;
-use vars qw(@ISA);
+use warnings;
 
-@ISA = 'AppleII::ProDOS::DirEntry';
+our @ISA = 'AppleII::ProDOS::DirEntry';
 
 my %fil_fields = (
     access      => 0xFF,
@@ -1513,9 +1509,9 @@ package AppleII::ProDOS::Index;
 use integer;
 use bytes;
 use strict;
-use vars '@ISA';
+use warnings;
 
-@ISA = 'AppleII::ProDOS::Members';
+our @ISA = 'AppleII::ProDOS::Members';
 
 my %in_fields = (
     blocks => undef,
@@ -1622,13 +1618,12 @@ package AppleII::ProDOS::Members;
 #---------------------------------------------------------------------
 
 use Carp;
-use vars '$AUTOLOAD';
 
 sub AUTOLOAD
 {
     my $self = $_[0];
     my $type = ref($self) or croak("$self is not an object");
-    my $name = $AUTOLOAD;
+    my $name = our $AUTOLOAD;
     $name =~ s/.*://;   # strip fully-qualified portion
     my $field = $name;
     $field =~ s/_([a-z])/\u$1/g; # squash underlines into mixed case
@@ -1663,6 +1658,12 @@ __END__
 =head1 NAME
 
 AppleII::ProDOS - Access files on Apple II ProDOS disk images
+
+=head1 VERSION
+
+This document describes version 0.09 of
+AppleII::ProDOS, released November 11, 2011
+as part of LibA2 version 0.09.
 
 =head1 SYNOPSIS
 
@@ -1965,7 +1966,15 @@ C<AppleII::ProDOS::Bitmap> represents the volume bitmap.
 
 C<AppleII::ProDOS::Index> represents an index block.
 
-=head1 BUGS
+=head1 CONFIGURATION AND ENVIRONMENT
+
+AppleII::ProDOS requires no configuration files or environment variables.
+
+=head1 INCOMPATIBILITIES
+
+None reported.
+
+=head1 BUGS AND LIMITATIONS
 
 =over 4
 
@@ -1982,20 +1991,38 @@ converted to upper case.
 
 =back
 
+=for Pod::Coverage
+^a2_croak$
+TODO: documentation unfinished
+^pack_date$
+^pack_name$
+^parse_date$
+^parse_name$
+^parse_type$
+^shell_wc$
+^short_date$
+^unpack_date$
+^valid_date$
+^valid_name$
+
 =head1 AUTHOR
 
-Christopher J. Madsen C<< <perl AT cjmweb.net> >>
+Christopher J. Madsen  S<C<< <perl AT cjmweb.net> >>>
 
-Please report any bugs or feature requests to
-C<< <bug-LibA2 AT rt.cpan.org> >>, or through the web interface
-at L<http://rt.cpan.org/Public/Bug/Report.html?Queue=LibA2>
+Please report any bugs or feature requests
+to S<C<< <bug-LibA2 AT rt.cpan.org> >>>
+or through the web interface at
+L<< http://rt.cpan.org/Public/Bug/Report.html?Queue=LibA2 >>.
 
+You can follow or contribute to LibA2's development at
+L<< http://github.com/madsen/perl-libA2 >>.
 
-=head1 LICENSE
+=head1 COPYRIGHT AND LICENSE
 
-This module is free software; you can redistribute it and/or
-modify it under the same terms as Perl itself. See L<perlartistic>.
+This software is copyright (c) 2011 by Christopher J. Madsen.
 
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =head1 DISCLAIMER OF WARRANTY
 

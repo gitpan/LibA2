@@ -1,7 +1,7 @@
 # Before `./Build install' is performed this script should be runnable with
 # `./Build test'. After `./Build install' it should work as `perl 20_ProDOS.t'
 #---------------------------------------------------------------------
-# $Id: 20_ProDOS.t 1538 2006-10-09 03:37:20Z cjm $
+# 20_ProDOS.t
 # Copyright 2006 Christopher J. Madsen
 #
 # This program is free software; you can redistribute it and/or modify
