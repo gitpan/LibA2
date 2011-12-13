@@ -466,8 +466,8 @@ AppleII::Disk - Block-level access to Apple II disk image files
 =head1 VERSION
 
 This document describes version 0.09 of
-AppleII::Disk, released November 11, 2011
-as part of LibA2 version 0.09.
+AppleII::Disk, released December 12, 2011
+as part of LibA2 version 0.10.
 
 =head1 SYNOPSIS
 

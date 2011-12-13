@@ -25,7 +25,7 @@ use bytes;
 use strict;
 use warnings;
 
-use Exporter 'import';
+use Exporter 5.57 'import';     # exported import method
 our @ISA = qw(AppleII::ProDOS::Members);
 our @EXPORT = qw();
 our @EXPORT_OK = qw(
@@ -51,7 +51,7 @@ my %dir_methods = (
 #=====================================================================
 # Package Global Variables:
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 # Filetype list from About Apple II File Type Notes -- June 1992
 my @filetypes = qw(
@@ -1661,9 +1661,9 @@ AppleII::ProDOS - Access files on Apple II ProDOS disk images
 
 =head1 VERSION
 
-This document describes version 0.09 of
-AppleII::ProDOS, released November 11, 2011
-as part of LibA2 version 0.09.
+This document describes version 0.10 of
+AppleII::ProDOS, released December 12, 2011
+as part of LibA2 version 0.10.
 
 =head1 SYNOPSIS
 

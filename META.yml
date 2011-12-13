@@ -4,11 +4,13 @@ author:
   - 'Christopher J. Madsen <perl@cjmweb.net>'
 build_requires:
   FindBin: 0
-  IO::All: 0
   Module::Build: 0.21
   Test::More: 0
 configure_requires:
+  Cwd: 0
   Module::Build: 0.21
+  base: 0
+  perl: 5.006
 dynamic_config: 1
 generated_by: 'Dist::Zilla version 4.300003, CPAN::Meta::Converter version 2.110440'
 license: perl
@@ -23,7 +25,7 @@ recommends:
   Term::ReadLine::Perl: 0
 requires:
   Carp: 0
-  Exporter: 0
+  Exporter: 5.57
   File::Glob: 0
   Getopt::Long: 2.10
   IO::File: 0
@@ -32,7 +34,7 @@ requires:
   perl: 5.006
 resources:
   repository: git://github.com/madsen/perl-libA2.git
-version: 0.09
+version: 0.10
 x_Dist_Zilla:
   plugins:
     -
@@ -60,6 +62,10 @@ x_Dist_Zilla:
       name: CJM/License
       version: 4.300003
     -
+      class: Dist::Zilla::Plugin::Test::PrereqsFromMeta
+      name: CJM/Test::PrereqsFromMeta
+      version: 4.04
+    -
       class: Dist::Zilla::Plugin::PodSyntaxTests
       name: CJM/PodSyntaxTests
       version: 4.300003
@@ -76,7 +82,7 @@ x_Dist_Zilla:
       config:
         Pod::Loom version: 0.05
       name: CJM/PodLoom
-      version: 4.01
+      version: 4.10
     -
       class: Dist::Zilla::Plugin::ModuleBuild::Custom
       name: CJM/ModuleBuild::Custom
@@ -92,7 +98,7 @@ x_Dist_Zilla:
     -
       class: Dist::Zilla::Plugin::RecommendedPrereqs
       name: CJM/RecommendedPrereqs
-      version: 4.00
+      version: 4.05
     -
       class: Dist::Zilla::Plugin::CheckPrereqsIndexed
       name: CJM/CheckPrereqsIndexed
@@ -142,9 +148,17 @@ x_Dist_Zilla:
       name: ExecDir
       version: 4.300003
     -
+      class: Dist::Zilla::Plugin::FileFinder::ByName
+      name: ':BuildPL'
+      version: 4.300003
+    -
+      class: Dist::Zilla::Plugin::FileFinder::Filter
+      name: ':TestPrereqs'
+      version: ~
+    -
       class: Dist::Zilla::Plugin::AutoPrereqs
       name: AutoPrereqs
-      version: 4.300003
+      version: ~
     -
       class: Dist::Zilla::Plugin::Metadata
       name: Metadata

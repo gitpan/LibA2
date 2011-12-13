@@ -8,24 +8,26 @@ use inc::A2_Build;          # Our customized version of Module::Build
 
 my $build = inc::A2_Build->new(
   dist_name          => 'LibA2',
-  dist_version       => '0.09',
+  dist_version       => '0.10',
   dist_author        => 'Christopher J. Madsen <perl@cjmweb.net>',
   module_name        => 'AppleII::ProDOS', # for packlist
   'build_requires' => {
     'FindBin' => '0',
-    'IO::All' => '0',
     'Module::Build' => '0.21',
     'Test::More' => '0'
   },
   'configure_requires' => {
-    'Module::Build' => '0.21'
+    'Cwd' => '0',
+    'Module::Build' => '0.21',
+    'base' => '0',
+    'perl' => '5.006'
   },
   'recommends' => {
     'Term::ReadLine::Perl' => '0'
   },
   'requires' => {
     'Carp' => '0',
-    'Exporter' => '0',
+    'Exporter' => '5.57',
     'File::Glob' => '0',
     'Getopt::Long' => '2.10',
     'IO::File' => '0',

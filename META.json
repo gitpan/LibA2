@@ -26,7 +26,10 @@
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.21"
+            "Cwd" : 0,
+            "Module::Build" : "0.21",
+            "base" : 0,
+            "perl" : "5.006"
          }
       },
       "runtime" : {
@@ -35,7 +38,7 @@
          },
          "requires" : {
             "Carp" : 0,
-            "Exporter" : 0,
+            "Exporter" : "5.57",
             "File::Glob" : 0,
             "Getopt::Long" : "2.10",
             "IO::File" : 0,
@@ -47,7 +50,6 @@
       "test" : {
          "requires" : {
             "FindBin" : 0,
-            "IO::All" : 0,
             "Test::More" : 0
          }
       }
@@ -60,7 +62,7 @@
          "web" : "http://github.com/madsen/perl-libA2"
       }
    },
-   "version" : "0.09",
+   "version" : "0.10",
    "x_Dist_Zilla" : {
       "plugins" : [
          {
@@ -94,6 +96,11 @@
             "version" : "4.300003"
          },
          {
+            "class" : "Dist::Zilla::Plugin::Test::PrereqsFromMeta",
+            "name" : "CJM/Test::PrereqsFromMeta",
+            "version" : "4.04"
+         },
+         {
             "class" : "Dist::Zilla::Plugin::PodSyntaxTests",
             "name" : "CJM/PodSyntaxTests",
             "version" : "4.300003"
@@ -114,7 +121,7 @@
                "Pod::Loom version" : "0.05"
             },
             "name" : "CJM/PodLoom",
-            "version" : "4.01"
+            "version" : "4.10"
          },
          {
             "class" : "Dist::Zilla::Plugin::ModuleBuild::Custom",
@@ -134,7 +141,7 @@
          {
             "class" : "Dist::Zilla::Plugin::RecommendedPrereqs",
             "name" : "CJM/RecommendedPrereqs",
-            "version" : "4.00"
+            "version" : "4.05"
          },
          {
             "class" : "Dist::Zilla::Plugin::CheckPrereqsIndexed",
@@ -197,9 +204,19 @@
             "version" : "4.300003"
          },
          {
+            "class" : "Dist::Zilla::Plugin::FileFinder::ByName",
+            "name" : ":BuildPL",
+            "version" : "4.300003"
+         },
+         {
+            "class" : "Dist::Zilla::Plugin::FileFinder::Filter",
+            "name" : ":TestPrereqs",
+            "version" : null
+         },
+         {
             "class" : "Dist::Zilla::Plugin::AutoPrereqs",
             "name" : "AutoPrereqs",
-            "version" : "4.300003"
+            "version" : null
          },
          {
             "class" : "Dist::Zilla::Plugin::Metadata",

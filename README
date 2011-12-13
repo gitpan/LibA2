@@ -1,4 +1,4 @@
-LibA2 version 0.09, released November 11, 2011
+LibA2 version 0.10, released December 12, 2011
 
 LibA2 provides both end-user utilities and library modules for
 accessing files on Apple II ProDOS disk images for use with most Apple
@@ -90,7 +90,7 @@ The included modules are:
 	the differences for you.
 
 
-    AppleII::ProDOS	version 0.09
+    AppleII::ProDOS	version 0.10
 	`AppleII::ProDOS' provides tools for accessing files on ProDOS
 	disk images.  `prodos' is basically just a wrapper around
 	AppleII::ProDOS.
@@ -117,7 +117,7 @@ DEPENDENCIES
   --------------- ---------------
   perl             5.006
   Carp             
-  Exporter         
+  Exporter         5.57
   File::Glob       
   Getopt::Long     2.10
   IO::File         
@@ -127,14 +127,11 @@ DEPENDENCIES
 
 
 CHANGES
-    Here's what's new in version 0.09 of LibA2:
+    Here's what's new in version 0.10 of LibA2:
     (See the file "Changes" for the full revision history.)
 
-	Require at least Perl 5.006
-
-	Updated utilities:
-	  prodos		version 0.09
-	    Use Term::ReadLine->Attribs to set up completion
+	Fixed Exporter prereq (need 5.57)
+	Remove IO::All from prereqs (picked up by mistake)
 
 
 
