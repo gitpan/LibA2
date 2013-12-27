@@ -1,4 +1,4 @@
-LibA2 version 0.10, released December 12, 2011
+LibA2 version 0.11, released December 26, 2013
 
 LibA2 provides both end-user utilities and library modules for
 accessing files on Apple II ProDOS disk images for use with most Apple
@@ -115,7 +115,7 @@ DEPENDENCIES
 
   Package         Minimum Version
   --------------- ---------------
-  perl             5.006
+  perl             5.6.0
   Carp             
   Exporter         5.57
   File::Glob       
@@ -127,11 +127,11 @@ DEPENDENCIES
 
 
 CHANGES
-    Here's what's new in version 0.10 of LibA2:
+    Here's what's new in version 0.11 of LibA2:
     (See the file "Changes" for the full revision history.)
 
-	Fixed Exporter prereq (need 5.57)
-	Remove IO::All from prereqs (picked up by mistake)
+	- No functional changes
+	- Release tests moved to xt/
 
 
 
@@ -161,7 +161,7 @@ Christopher J. Madsen <perl AT cjmweb.net>
 
 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Christopher J. Madsen.
+This software is copyright (c) 2013 by Christopher J. Madsen.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

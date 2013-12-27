@@ -466,8 +466,8 @@ AppleII::Disk - Block-level access to Apple II disk image files
 =head1 VERSION
 
 This document describes version 0.09 of
-AppleII::Disk, released December 12, 2011
-as part of LibA2 version 0.10.
+AppleII::Disk, released December 26, 2013
+as part of LibA2 version 0.11.
 
 =head1 SYNOPSIS
 
@@ -618,11 +618,11 @@ or through the web interface at
 L<< http://rt.cpan.org/Public/Bug/Report.html?Queue=LibA2 >>.
 
 You can follow or contribute to LibA2's development at
-L<< http://github.com/madsen/perl-libA2 >>.
+L<< https://github.com/madsen/perl-libA2 >>.
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Christopher J. Madsen.
+This software is copyright (c) 2013 by Christopher J. Madsen.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

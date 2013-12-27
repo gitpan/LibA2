@@ -8,7 +8,7 @@ use inc::A2_Build;          # Our customized version of Module::Build
 
 my $build = inc::A2_Build->new(
   dist_name          => 'LibA2',
-  dist_version       => '0.10',
+  dist_version       => '0.11',
   dist_author        => 'Christopher J. Madsen <perl@cjmweb.net>',
   module_name        => 'AppleII::ProDOS', # for packlist
   'build_requires' => {
